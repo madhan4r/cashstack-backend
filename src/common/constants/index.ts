@@ -1,0 +1,79 @@
+export const IS_PUBLIC_KEY = 'isPublic';
+
+export const AUTH_MESSAGES = {
+  REGISTER_SUCCESS: 'User registered successfully',
+  LOGIN_SUCCESS: 'Login successful',
+  LOGOUT_SUCCESS: 'Logout successful',
+  TOKEN_REFRESH_SUCCESS: 'Token refreshed successfully',
+  INVALID_CREDENTIALS: 'Invalid email or password',
+  EMAIL_ALREADY_EXISTS: 'An account with this email already exists',
+  INVALID_REFRESH_TOKEN: 'Invalid or expired refresh token',
+  USER_NOT_FOUND: 'User not found',
+  FORGOT_PASSWORD_SUCCESS:
+    'If an account exists for this email, a password reset link has been sent',
+  RESET_PASSWORD_SUCCESS:
+    'Password reset successfully. Please log in with your new password',
+  INVALID_RESET_TOKEN: 'Invalid or expired password reset token',
+} as const;
+
+export const USER_MESSAGES = {
+  PROFILE_FETCHED: 'Profile fetched successfully',
+  PROFILE_UPDATED: 'Profile updated successfully',
+} as const;
+
+export const ACCOUNT_MESSAGES = {
+  CREATED: 'Account created successfully',
+  UPDATED: 'Account updated successfully',
+  DELETED: 'Account deleted successfully',
+  ARCHIVED: 'Account archived successfully',
+  UNARCHIVED: 'Account unarchived successfully',
+  FETCHED: 'Account fetched successfully',
+  LIST_FETCHED: 'Accounts fetched successfully',
+  NOT_FOUND: 'Account not found',
+  DUPLICATE_NAME: 'An account with this name already exists',
+} as const;
+
+export const TRANSACTION_MESSAGES = {
+  CREATED: 'Transaction created successfully',
+  UPDATED: 'Transaction updated successfully',
+  DELETED: 'Transaction deleted successfully',
+  FETCHED: 'Transaction fetched successfully',
+  LIST_FETCHED: 'Transactions fetched successfully',
+  NOT_FOUND: 'Transaction not found',
+  ACCOUNT_NOT_FOUND: 'One or more accounts could not be found',
+  CATEGORY_NOT_FOUND: 'Category could not be found',
+  CATEGORY_TYPE_MISMATCH: 'Category type does not match transaction type',
+  INVALID_TRANSFER_SAME_ACCOUNT:
+    'Source and destination accounts must be different',
+  ACCOUNT_CATEGORY_NOT_ALLOWED_FOR_TRANSFER:
+    'accountId and categoryId are not applicable to TRANSFER transactions',
+  TRANSFER_ACCOUNTS_REQUIRED:
+    'fromAccountId and toAccountId are required for TRANSFER transactions',
+  ACCOUNT_CATEGORY_REQUIRED:
+    'accountId and categoryId are required for INCOME/EXPENSE transactions',
+} as const;
+
+export const CATEGORY_MESSAGES = {
+  CREATED: 'Category created successfully',
+  UPDATED: 'Category updated successfully',
+  DELETED: 'Category deleted successfully',
+  FETCHED: 'Category fetched successfully',
+  LIST_FETCHED: 'Categories fetched successfully',
+  NOT_FOUND: 'Category not found',
+  DUPLICATE_NAME: 'A category with this name already exists for this type',
+  DEFAULT_CANNOT_BE_MODIFIED: 'Default categories cannot be modified',
+  DEFAULT_CANNOT_BE_DELETED: 'Default categories cannot be deleted',
+} as const;
+
+export const DASHBOARD_MESSAGES = {
+  FETCHED: 'Dashboard fetched successfully.',
+} as const;
+
+export const REPORT_MESSAGES = {
+  SUMMARY_FETCHED: 'Summary report fetched successfully',
+  MONTHLY_FETCHED: 'Monthly report fetched successfully',
+  YEARLY_FETCHED: 'Yearly report fetched successfully',
+  CATEGORY_FETCHED: 'Category report fetched successfully',
+  ACCOUNT_FETCHED: 'Account report fetched successfully',
+  CASH_FLOW_FETCHED: 'Cash flow report fetched successfully',
+} as const;

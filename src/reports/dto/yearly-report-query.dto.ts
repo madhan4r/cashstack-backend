@@ -1,0 +1,17 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { ReportFilterDto } from './report-filter.dto';
+
+export class YearlyReportQueryDto extends ReportFilterDto {
+  @ApiPropertyOptional({
+    description: 'Year to report on (defaults to the current year)',
+    example: 2024,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1970)
+  @Max(9999)
+  year?: number;
+}
