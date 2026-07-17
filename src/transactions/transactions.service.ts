@@ -236,7 +236,21 @@ export class TransactionsService {
       userId: new Types.ObjectId(userId),
     };
 
-    if (query.date) {
+    if (query.fromDate || query.toDate) {
+      const dateFilter: Record<string, Date> = {};
+      if (query.fromDate) {
+        const start = new Date(query.fromDate);
+        start.setUTCHours(0, 0, 0, 0);
+        dateFilter.$gte = start;
+      }
+      if (query.toDate) {
+        const end = new Date(query.toDate);
+        end.setUTCHours(0, 0, 0, 0);
+        end.setUTCDate(end.getUTCDate() + 1);
+        dateFilter.$lt = end;
+      }
+      match.transactionDate = dateFilter;
+    } else if (query.date) {
       const start = new Date(query.date);
       start.setUTCHours(0, 0, 0, 0);
       const end = new Date(start);
@@ -271,9 +285,30 @@ export class TransactionsService {
       match.type = query.type;
     }
 
+    if (query.minAmount !== undefined || query.maxAmount !== undefined) {
+      const amountFilter: Record<string, number> = {};
+      if (query.minAmount !== undefined) {
+        amountFilter.$gte = query.minAmount;
+      }
+      if (query.maxAmount !== undefined) {
+        amountFilter.$lte = query.maxAmount;
+      }
+      match.amount = amountFilter;
+    }
+
     if (query.search) {
       const searchRegex = new RegExp(this.escapeRegex(query.search), 'i');
-      match.$and = [{ $or: [{ notes: searchRegex }, { tags: searchRegex }] }];
+      const searchConditions: Record<string, unknown>[] = [
+        { notes: searchRegex },
+        { tags: searchRegex },
+      ];
+
+      const numericSearch = Number(query.search);
+      if (!Number.isNaN(numericSearch)) {
+        searchConditions.push({ amount: numericSearch });
+      }
+
+      match.$and = [{ $or: searchConditions }];
     }
 
     return match;
@@ -285,6 +320,8 @@ export class TransactionsService {
         return { transactionDate: 1 };
       case TransactionSort.AMOUNT:
         return { amount: -1 };
+      case TransactionSort.AMOUNT_ASC:
+        return { amount: 1 };
       case TransactionSort.NEWEST:
       default:
         return { transactionDate: -1 };

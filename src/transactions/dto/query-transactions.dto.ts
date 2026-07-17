@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsInt,
   IsMongoId,
+  IsNumber,
   IsOptional,
   IsString,
   Max,
@@ -20,6 +21,23 @@ export class QueryTransactionsDto {
   @IsOptional()
   @IsDateString()
   date?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Start of a date range filter (ISO 8601 date, inclusive). Takes precedence over date/month/year when provided.',
+    example: '2024-01-01',
+  })
+  @IsOptional()
+  @IsDateString()
+  fromDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'End of a date range filter (ISO 8601 date, inclusive)',
+    example: '2024-01-31',
+  })
+  @IsOptional()
+  @IsDateString()
+  toDate?: string;
 
   @ApiPropertyOptional({ description: 'Filter by month (1-12)', example: 1 })
   @IsOptional()
@@ -59,12 +77,33 @@ export class QueryTransactionsDto {
   type?: TransactionType;
 
   @ApiPropertyOptional({
-    description: 'Free-text search across notes and tags',
+    description:
+      'Free-text search across notes and tags. If the search text parses as a number, transactions with a matching amount are also included.',
     example: 'groceries',
   })
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: 'Minimum amount (inclusive)',
+    example: 10,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  minAmount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum amount (inclusive)',
+    example: 500,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  maxAmount?: number;
 
   @ApiPropertyOptional({
     description: 'Page number, starting at 1',
