@@ -20,13 +20,17 @@ import { CurrentUser } from '../common/decorators';
 import { ParseObjectIdPipe } from '../common/pipes';
 import { ACCOUNT_MESSAGES } from '../common/constants';
 import { AccountsService } from './accounts.service';
+import { AccountBalanceService } from './services/account-balance.service';
 import { CreateAccountDto, UpdateAccountDto, AccountResponseDto } from './dto';
 
 @ApiTags('Accounts')
 @ApiBearerAuth()
 @Controller({ path: 'accounts', version: '1' })
 export class AccountsController {
-  constructor(private readonly accountsService: AccountsService) {}
+  constructor(
+    private readonly accountsService: AccountsService,
+    private readonly accountBalanceService: AccountBalanceService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -61,12 +65,23 @@ export class AccountsController {
     type: [AccountResponseDto],
   })
   async findAll(@CurrentUser('sub') userId: string) {
-    const accounts = await this.accountsService.findAll(userId);
+    const [accounts, balances] = await Promise.all([
+      this.accountsService.findAll(userId),
+      this.accountBalanceService.getAccountBalances(userId, {
+        includeArchived: true,
+      }),
+    ]);
+    const balanceById = new Map(
+      balances.map((balance) => [balance._id.toString(), balance.balance]),
+    );
+
     return {
       message: ACCOUNT_MESSAGES.LIST_FETCHED,
-      data: accounts.map((account) =>
-        this.accountsService.toSanitized(account),
-      ),
+      data: accounts.map((account) => ({
+        ...this.accountsService.toSanitized(account),
+        balance:
+          balanceById.get(account._id.toString()) ?? account.openingBalance,
+      })),
     };
   }
 

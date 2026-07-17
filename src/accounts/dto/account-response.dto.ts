@@ -14,6 +14,12 @@ export class AccountResponseDto {
   @ApiProperty({ example: 1000 })
   openingBalance!: number;
 
+  @ApiProperty({
+    example: 1250.5,
+    description: 'Opening balance plus the net effect of every transaction',
+  })
+  balance!: number;
+
   @ApiProperty({ example: 'INR' })
   currency!: string;
 
