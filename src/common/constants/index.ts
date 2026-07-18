@@ -82,3 +82,22 @@ export const REPORT_MESSAGES = {
   ACCOUNT_FETCHED: 'Account report fetched successfully',
   CASH_FLOW_FETCHED: 'Cash flow report fetched successfully',
 } as const;
+
+export const RECURRING_MESSAGES = {
+  CREATED: 'Recurring transaction created successfully',
+  UPDATED: 'Recurring transaction updated successfully',
+  DELETED: 'Recurring transaction deleted successfully',
+  FETCHED: 'Recurring transaction fetched successfully',
+  LIST_FETCHED: 'Recurring transactions fetched successfully',
+  UPCOMING_FETCHED: 'Upcoming schedule fetched successfully',
+  HISTORY_FETCHED: 'Recurring history fetched successfully',
+  PAUSED: 'Recurring transaction paused successfully',
+  RESUMED: 'Recurring transaction resumed successfully',
+  NOT_FOUND: 'Recurring transaction not found',
+  TRANSFER_NOT_SUPPORTED: 'Recurring transfers are not supported',
+  CATEGORY_TYPE_MISMATCH: 'Category type does not match the recurring transaction type',
+  ALREADY_PAUSED: 'Recurring transaction is already paused',
+  ALREADY_ACTIVE: 'Recurring transaction is already active',
+  COMPLETED_CANNOT_CHANGE_STATUS:
+    'This recurring transaction has completed and its status can no longer be changed',
+} as const;

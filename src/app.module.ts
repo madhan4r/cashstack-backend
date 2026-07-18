@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
+import { RecurringModule } from './recurring/recurring.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -31,6 +32,7 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
     TransactionsModule,
     DashboardModule,
     ReportsModule,
+    RecurringModule,
   ],
   controllers: [AppController],
   providers: [
