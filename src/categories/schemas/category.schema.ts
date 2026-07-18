@@ -27,8 +27,14 @@ export class Category {
   @Prop({ type: String, default: null })
   color!: string | null;
 
+  @Prop({ type: String, default: null, trim: true })
+  description!: string | null;
+
   @Prop({ default: false, index: true })
   isDefault!: boolean;
+
+  @Prop({ default: false })
+  isArchived!: boolean;
 
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User', default: null, index: true })
   userId!: Types.ObjectId | null;

@@ -21,7 +21,12 @@ import { ParseObjectIdPipe } from '../common/pipes';
 import { ACCOUNT_MESSAGES } from '../common/constants';
 import { AccountsService } from './accounts.service';
 import { AccountBalanceService } from './services/account-balance.service';
-import { CreateAccountDto, UpdateAccountDto, AccountResponseDto } from './dto';
+import {
+  CreateAccountDto,
+  UpdateAccountDto,
+  AccountResponseDto,
+  AccountStatsResponseDto,
+} from './dto';
 
 @ApiTags('Accounts')
 @ApiBearerAuth()
@@ -99,10 +104,48 @@ export class AccountsController {
     @CurrentUser('sub') userId: string,
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
-    const account = await this.accountsService.findOne(userId, id);
+    const [account, balances] = await Promise.all([
+      this.accountsService.findOne(userId, id),
+      this.accountBalanceService.getAccountBalances(userId, {
+        accountId: id,
+        includeArchived: true,
+      }),
+    ]);
+
     return {
       message: ACCOUNT_MESSAGES.FETCHED,
-      data: this.accountsService.toSanitized(account),
+      data: {
+        ...this.accountsService.toSanitized(account),
+        balance: balances[0]?.balance ?? account.openingBalance,
+      },
+    };
+  }
+
+  @Get(':id/stats')
+  @ApiOperation({
+    summary: 'Get account statistics',
+    description:
+      'Total income, total expense, and transaction count for a single account, computed from its full transaction ledger.',
+  })
+  @ApiOkResponse({
+    description: 'Account statistics fetched successfully',
+    type: AccountStatsResponseDto,
+  })
+  async stats(
+    @CurrentUser('sub') userId: string,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
+    await this.accountsService.findOne(userId, id);
+    const stats = await this.accountBalanceService.getAccountStats(userId, id);
+
+    return {
+      message: ACCOUNT_MESSAGES.STATS_FETCHED,
+      data: stats ?? {
+        balance: 0,
+        totalIncome: 0,
+        totalExpense: 0,
+        transactionCount: 0,
+      },
     };
   }
 

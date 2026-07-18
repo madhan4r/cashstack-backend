@@ -8,6 +8,7 @@ export interface SanitizedAccount {
   currency: string;
   color: string | null;
   icon: string | null;
+  description: string | null;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;

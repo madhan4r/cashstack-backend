@@ -20,6 +20,7 @@ import { CurrentUser } from '../common/decorators';
 import { ParseObjectIdPipe } from '../common/pipes';
 import { CATEGORY_MESSAGES } from '../common/constants';
 import { CategoriesService } from './categories.service';
+import { CategoryStatsService } from './services/category-stats.service';
 import {
   CreateCategoryDto,
   UpdateCategoryDto,
@@ -30,7 +31,10 @@ import {
 @ApiBearerAuth()
 @Controller({ path: 'categories', version: '1' })
 export class CategoriesController {
-  constructor(private readonly categoriesService: CategoriesService) {}
+  constructor(
+    private readonly categoriesService: CategoriesService,
+    private readonly categoryStatsService: CategoryStatsService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -66,10 +70,18 @@ export class CategoriesController {
   })
   async findAll(@CurrentUser('sub') userId: string) {
     const categories = await this.categoriesService.findAll(userId);
+    const statsById = await this.categoryStatsService.getStatsByCategory(
+      userId,
+      categories.map((category) => category._id.toString()),
+    );
+
     return {
       message: CATEGORY_MESSAGES.LIST_FETCHED,
       data: categories.map((category) =>
-        this.categoriesService.toSanitized(category),
+        this.categoriesService.toSanitized(
+          category,
+          statsById.get(category._id.toString()),
+        ),
       ),
     };
   }
@@ -89,9 +101,10 @@ export class CategoriesController {
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
     const category = await this.categoriesService.findOne(userId, id);
+    const stats = await this.categoryStatsService.getStatsForCategory(userId, id);
     return {
       message: CATEGORY_MESSAGES.FETCHED,
-      data: this.categoriesService.toSanitized(category),
+      data: this.categoriesService.toSanitized(category, stats),
     };
   }
 
@@ -132,6 +145,47 @@ export class CategoriesController {
     return {
       message: CATEGORY_MESSAGES.DELETED,
       data: null,
+    };
+  }
+
+  @Patch(':id/archive')
+  @ApiOperation({
+    summary: 'Archive a category',
+    description:
+      'Hides a category (default or custom) from the default category list without deleting it.',
+  })
+  @ApiOkResponse({
+    description: 'Category archived successfully',
+    type: CategoryResponseDto,
+  })
+  async archive(
+    @CurrentUser('sub') userId: string,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
+    const category = await this.categoriesService.archive(userId, id);
+    return {
+      message: CATEGORY_MESSAGES.ARCHIVED,
+      data: this.categoriesService.toSanitized(category),
+    };
+  }
+
+  @Patch(':id/unarchive')
+  @ApiOperation({
+    summary: 'Unarchive a category',
+    description: 'Restores a previously archived category to active status.',
+  })
+  @ApiOkResponse({
+    description: 'Category unarchived successfully',
+    type: CategoryResponseDto,
+  })
+  async unarchive(
+    @CurrentUser('sub') userId: string,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
+    const category = await this.categoriesService.unarchive(userId, id);
+    return {
+      message: CATEGORY_MESSAGES.UNARCHIVED,
+      data: this.categoriesService.toSanitized(category),
     };
   }
 }

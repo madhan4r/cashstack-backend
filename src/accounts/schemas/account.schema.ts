@@ -41,6 +41,9 @@ export class Account {
   @Prop({ type: String, default: null })
   icon!: string | null;
 
+  @Prop({ type: String, default: null, trim: true })
+  description!: string | null;
+
   @Prop({ default: false })
   isArchived!: boolean;
 

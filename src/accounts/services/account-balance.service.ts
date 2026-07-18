@@ -136,4 +136,122 @@ export class AccountBalanceService {
     const balances = await this.getAccountBalances(userId, options);
     return balances.reduce((sum, account) => sum + account.balance, 0);
   }
+
+  /**
+   * Total income/expense and transaction count for a single account, used
+   * by the Account Details screen. "Income" is every ledger entry that
+   * increases the account's balance (INCOME transactions plus incoming
+   * transfers); "expense" is every entry that decreases it (EXPENSE
+   * transactions plus outgoing transfers) — the same signed-amount ledger
+   * used by [getAccountBalances], just split by sign instead of summed.
+   */
+  async getAccountStats(
+    userId: string,
+    accountId: string,
+  ): Promise<AccountStats | null> {
+    const userObjectId = new Types.ObjectId(userId);
+    const accountObjectId = new Types.ObjectId(accountId);
+
+    const pipeline: PipelineStage[] = [
+      { $match: { _id: accountObjectId, userId: userObjectId, isDeleted: false } },
+      {
+        $lookup: {
+          from: 'transactions',
+          let: { accountId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$userId', userObjectId] },
+                    {
+                      $or: [
+                        { $eq: ['$accountId', '$$accountId'] },
+                        { $eq: ['$fromAccountId', '$$accountId'] },
+                        { $eq: ['$toAccountId', '$$accountId'] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                signedAmount: {
+                  $switch: {
+                    branches: [
+                      {
+                        case: { $eq: ['$type', TransactionType.INCOME] },
+                        then: '$amount',
+                      },
+                      {
+                        case: { $eq: ['$type', TransactionType.EXPENSE] },
+                        then: { $multiply: ['$amount', -1] },
+                      },
+                      {
+                        case: { $eq: ['$toAccountId', '$$accountId'] },
+                        then: '$amount',
+                      },
+                      {
+                        case: { $eq: ['$fromAccountId', '$$accountId'] },
+                        then: { $multiply: ['$amount', -1] },
+                      },
+                    ],
+                    default: 0,
+                  },
+                },
+              },
+            },
+          ],
+          as: 'ledgerEntries',
+        },
+      },
+      {
+        $addFields: {
+          balance: {
+            $add: ['$openingBalance', { $sum: '$ledgerEntries.signedAmount' }],
+          },
+          totalIncome: {
+            $sum: {
+              $filter: {
+                input: '$ledgerEntries.signedAmount',
+                as: 'entry',
+                cond: { $gt: ['$$entry', 0] },
+              },
+            },
+          },
+          totalExpense: {
+            $abs: {
+              $sum: {
+                $filter: {
+                  input: '$ledgerEntries.signedAmount',
+                  as: 'entry',
+                  cond: { $lt: ['$$entry', 0] },
+                },
+              },
+            },
+          },
+          transactionCount: { $size: '$ledgerEntries' },
+        },
+      },
+      {
+        $project: {
+          balance: 1,
+          totalIncome: 1,
+          totalExpense: 1,
+          transactionCount: 1,
+        },
+      },
+    ];
+
+    const [result] = await this.accountModel.aggregate<AccountStats>(pipeline);
+    return result ?? null;
+  }
+}
+
+export interface AccountStats {
+  balance: number;
+  totalIncome: number;
+  totalExpense: number;
+  transactionCount: number;
 }

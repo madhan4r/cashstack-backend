@@ -29,6 +29,7 @@ export const ACCOUNT_MESSAGES = {
   UNARCHIVED: 'Account unarchived successfully',
   FETCHED: 'Account fetched successfully',
   LIST_FETCHED: 'Accounts fetched successfully',
+  STATS_FETCHED: 'Account statistics fetched successfully',
   NOT_FOUND: 'Account not found',
   DUPLICATE_NAME: 'An account with this name already exists',
 } as const;
@@ -63,6 +64,10 @@ export const CATEGORY_MESSAGES = {
   DUPLICATE_NAME: 'A category with this name already exists for this type',
   DEFAULT_CANNOT_BE_MODIFIED: 'Default categories cannot be modified',
   DEFAULT_CANNOT_BE_DELETED: 'Default categories cannot be deleted',
+  ARCHIVED: 'Category archived successfully',
+  UNARCHIVED: 'Category unarchived successfully',
+  HAS_TRANSACTIONS:
+    'This category has transactions and cannot be deleted — archive it instead',
 } as const;
 
 export const DASHBOARD_MESSAGES = {

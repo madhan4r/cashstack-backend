@@ -4,4 +4,7 @@ export enum AccountType {
   UPI = 'UPI',
   EWALLET = 'EWALLET',
   CREDIT_CARD = 'CREDIT_CARD',
+  DEBIT_CARD = 'DEBIT_CARD',
+  INVESTMENT = 'INVESTMENT',
+  SAVINGS = 'SAVINGS',
 }

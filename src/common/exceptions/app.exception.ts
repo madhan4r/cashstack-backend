@@ -41,3 +41,9 @@ export class ForbiddenActionException extends AppException {
     super(message, HttpStatus.FORBIDDEN);
   }
 }
+
+export class ConflictActionException extends AppException {
+  constructor(message: string) {
+    super(message, HttpStatus.CONFLICT);
+  }
+}

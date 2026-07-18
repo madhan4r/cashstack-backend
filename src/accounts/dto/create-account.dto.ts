@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   Length,
+  Min,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -34,8 +35,10 @@ export class CreateAccountDto {
   @ApiProperty({
     description: 'Opening balance recorded when the account was created',
     example: 1000,
+    minimum: 0,
   })
   @IsNumber()
+  @Min(0)
   openingBalance!: number;
 
   @ApiProperty({
@@ -64,4 +67,14 @@ export class CreateAccountDto {
   @IsString()
   @MaxLength(50)
   icon?: string;
+
+  @ApiPropertyOptional({
+    description: 'Free-text notes about the account',
+    example: 'Primary salary account',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
 }

@@ -99,6 +99,7 @@ export class AccountsService {
       currency: account.currency,
       color: account.color,
       icon: account.icon,
+      description: account.description,
       isArchived: account.isArchived,
       createdAt: (account as unknown as { createdAt: Date }).createdAt,
       updatedAt: (account as unknown as { updatedAt: Date }).updatedAt,

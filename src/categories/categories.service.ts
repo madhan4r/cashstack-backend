@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CATEGORY_MESSAGES } from '../common/constants';
 import {
+  ConflictActionException,
   ForbiddenActionException,
   ResourceAlreadyExistsException,
   ResourceNotFoundException,
@@ -11,7 +12,8 @@ import { DEFAULT_CATEGORIES } from './constants';
 import { CategoryType } from './enums';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { SanitizedCategory } from './interfaces';
+import { CategoryStats, SanitizedCategory } from './interfaces';
+import { CategoryStatsService } from './services/category-stats.service';
 import { Category, CategoryDocument } from './schemas/category.schema';
 
 const MONGO_DUPLICATE_KEY_ERROR_CODE = 11000;
@@ -23,6 +25,7 @@ export class CategoriesService implements OnModuleInit {
   constructor(
     @InjectModel(Category.name)
     private readonly categoryModel: Model<Category>,
+    private readonly categoryStatsService: CategoryStatsService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -96,17 +99,46 @@ export class CategoriesService implements OnModuleInit {
       categoryId,
       CATEGORY_MESSAGES.DEFAULT_CANNOT_BE_DELETED,
     );
+
+    const stats = await this.categoryStatsService.getStatsForCategory(userId, categoryId);
+    if (stats.transactionCount > 0) {
+      throw new ConflictActionException(CATEGORY_MESSAGES.HAS_TRANSACTIONS);
+    }
+
     await category.deleteOne();
   }
 
-  toSanitized(category: CategoryDocument): SanitizedCategory {
+  /**
+   * Archiving/restoring is a visibility toggle, not a content edit — unlike
+   * [update] and [remove], it's allowed on default categories too, so users
+   * can hide default categories they don't use without needing to "own"
+   * them.
+   */
+  async archive(userId: string, categoryId: string): Promise<CategoryDocument> {
+    const category = await this.findOne(userId, categoryId);
+    category.isArchived = true;
+    return category.save();
+  }
+
+  async unarchive(userId: string, categoryId: string): Promise<CategoryDocument> {
+    const category = await this.findOne(userId, categoryId);
+    category.isArchived = false;
+    return category.save();
+  }
+
+  toSanitized(category: CategoryDocument, stats?: CategoryStats): SanitizedCategory {
     return {
       id: category._id.toString(),
       name: category.name,
       type: category.type,
       icon: category.icon,
       color: category.color,
+      description: category.description,
       isDefault: category.isDefault,
+      isArchived: category.isArchived,
+      transactionCount: stats?.transactionCount ?? 0,
+      totalAmount: stats?.totalAmount ?? 0,
+      lastUsedAt: stats?.lastUsedAt ?? null,
       createdAt: (category as unknown as { createdAt: Date }).createdAt,
       updatedAt: (category as unknown as { updatedAt: Date }).updatedAt,
     };

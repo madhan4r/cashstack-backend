@@ -45,4 +45,14 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsHexColor()
   color?: string;
+
+  @ApiPropertyOptional({
+    description: 'Free-text notes about the category',
+    example: 'Groceries and supermarket runs',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
 }

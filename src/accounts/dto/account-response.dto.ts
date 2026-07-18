@@ -29,6 +29,9 @@ export class AccountResponseDto {
   @ApiPropertyOptional({ example: 'bank', nullable: true })
   icon!: string | null;
 
+  @ApiPropertyOptional({ example: 'Primary salary account', nullable: true })
+  description!: string | null;
+
   @ApiProperty({ example: false })
   isArchived!: boolean;
 
