@@ -25,7 +25,9 @@ export class CategoryStatsService {
     };
 
     if (categoryIds?.length) {
-      match.categoryId = { $in: categoryIds.map((id) => new Types.ObjectId(id)) };
+      match.categoryId = {
+        $in: categoryIds.map((id) => new Types.ObjectId(id)),
+      };
     }
 
     const rows = await this.connection
@@ -60,10 +62,17 @@ export class CategoryStatsService {
     );
   }
 
-  async getStatsForCategory(userId: string, categoryId: string): Promise<CategoryStats> {
+  async getStatsForCategory(
+    userId: string,
+    categoryId: string,
+  ): Promise<CategoryStats> {
     const stats = await this.getStatsByCategory(userId, [categoryId]);
     return (
-      stats.get(categoryId) ?? { transactionCount: 0, totalAmount: 0, lastUsedAt: null }
+      stats.get(categoryId) ?? {
+        transactionCount: 0,
+        totalAmount: 0,
+        lastUsedAt: null,
+      }
     );
   }
 }

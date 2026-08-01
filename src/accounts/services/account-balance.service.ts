@@ -153,7 +153,13 @@ export class AccountBalanceService {
     const accountObjectId = new Types.ObjectId(accountId);
 
     const pipeline: PipelineStage[] = [
-      { $match: { _id: accountObjectId, userId: userObjectId, isDeleted: false } },
+      {
+        $match: {
+          _id: accountObjectId,
+          userId: userObjectId,
+          isDeleted: false,
+        },
+      },
       {
         $lookup: {
           from: 'transactions',

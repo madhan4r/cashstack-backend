@@ -100,7 +100,10 @@ export class CategoriesService implements OnModuleInit {
       CATEGORY_MESSAGES.DEFAULT_CANNOT_BE_DELETED,
     );
 
-    const stats = await this.categoryStatsService.getStatsForCategory(userId, categoryId);
+    const stats = await this.categoryStatsService.getStatsForCategory(
+      userId,
+      categoryId,
+    );
     if (stats.transactionCount > 0) {
       throw new ConflictActionException(CATEGORY_MESSAGES.HAS_TRANSACTIONS);
     }
@@ -120,13 +123,19 @@ export class CategoriesService implements OnModuleInit {
     return category.save();
   }
 
-  async unarchive(userId: string, categoryId: string): Promise<CategoryDocument> {
+  async unarchive(
+    userId: string,
+    categoryId: string,
+  ): Promise<CategoryDocument> {
     const category = await this.findOne(userId, categoryId);
     category.isArchived = false;
     return category.save();
   }
 
-  toSanitized(category: CategoryDocument, stats?: CategoryStats): SanitizedCategory {
+  toSanitized(
+    category: CategoryDocument,
+    stats?: CategoryStats,
+  ): SanitizedCategory {
     return {
       id: category._id.toString(),
       name: category.name,

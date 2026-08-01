@@ -11,7 +11,12 @@ import { CreateRecurringDto } from './dto/create-recurring.dto';
 import { UpdateRecurringDto } from './dto/update-recurring.dto';
 import { QueryRecurringDto } from './dto/query-recurring.dto';
 import { QueryHistoryDto } from './dto/query-history.dto';
-import { OccurrenceStatus, RecurrenceFrequency, RecurringSort, RecurringStatus } from './enums';
+import {
+  OccurrenceStatus,
+  RecurrenceFrequency,
+  RecurringSort,
+  RecurringStatus,
+} from './enums';
 import { SanitizedRecurring } from './interfaces';
 import {
   RecurringOccurrence,
@@ -46,12 +51,20 @@ export class RecurringService {
     private readonly transactionsService: TransactionsService,
   ) {}
 
-  async create(userId: string, dto: CreateRecurringDto): Promise<RecurringTransactionDocument> {
+  async create(
+    userId: string,
+    dto: CreateRecurringDto,
+  ): Promise<RecurringTransactionDocument> {
     if (dto.type === TransactionType.TRANSFER) {
       throw new AppException(RECURRING_MESSAGES.TRANSFER_NOT_SUPPORTED);
     }
 
-    await this.assertAccountAndCategory(userId, dto.type, dto.accountId, dto.categoryId);
+    await this.assertAccountAndCategory(
+      userId,
+      dto.type,
+      dto.accountId,
+      dto.categoryId,
+    );
 
     const doc = await this.recurringModel.create({
       userId,
@@ -80,14 +93,22 @@ export class RecurringService {
   ): Promise<RecurringTransactionDocument[]> {
     await this.catchUpAllActive(userId);
 
-    const match: Record<string, unknown> = { userId: new Types.ObjectId(userId) };
+    const match: Record<string, unknown> = {
+      userId: new Types.ObjectId(userId),
+    };
     if (query.status) match.status = query.status;
     if (query.frequency) match.frequency = query.frequency;
 
-    return this.recurringModel.find(match).sort(this.sortStage(query.sort)).exec();
+    return this.recurringModel
+      .find(match)
+      .sort(this.sortStage(query.sort))
+      .exec();
   }
 
-  async findOne(userId: string, id: string): Promise<RecurringTransactionDocument> {
+  async findOne(
+    userId: string,
+    id: string,
+  ): Promise<RecurringTransactionDocument> {
     const doc = await this.recurringModel.findOne({ _id: id, userId }).exec();
     if (!doc) {
       throw new ResourceNotFoundException(RECURRING_MESSAGES.NOT_FOUND);
@@ -128,8 +149,15 @@ export class RecurringService {
       notes: dto.notes !== undefined ? (dto.notes ?? null) : doc.notes,
       frequency: dto.frequency ?? doc.frequency,
       customIntervalDays:
-        dto.customIntervalDays !== undefined ? dto.customIntervalDays : doc.customIntervalDays,
-      endDate: dto.endDate !== undefined ? (dto.endDate ? new Date(dto.endDate) : null) : doc.endDate,
+        dto.customIntervalDays !== undefined
+          ? dto.customIntervalDays
+          : doc.customIntervalDays,
+      endDate:
+        dto.endDate !== undefined
+          ? dto.endDate
+            ? new Date(dto.endDate)
+            : null
+          : doc.endDate,
       reminder: dto.reminder ?? doc.reminder,
       autoGenerate: dto.autoGenerate ?? doc.autoGenerate,
     });
@@ -153,11 +181,16 @@ export class RecurringService {
     const doc = await this.findOne(userId, id);
     await Promise.all([
       doc.deleteOne(),
-      this.occurrenceModel.deleteMany({ recurringTransactionId: doc._id }).exec(),
+      this.occurrenceModel
+        .deleteMany({ recurringTransactionId: doc._id })
+        .exec(),
     ]);
   }
 
-  async pause(userId: string, id: string): Promise<RecurringTransactionDocument> {
+  async pause(
+    userId: string,
+    id: string,
+  ): Promise<RecurringTransactionDocument> {
     const doc = await this.findOne(userId, id);
     if (doc.status === RecurringStatus.COMPLETED) {
       throw new AppException(RECURRING_MESSAGES.COMPLETED_CANNOT_CHANGE_STATUS);
@@ -169,7 +202,10 @@ export class RecurringService {
     return doc.save();
   }
 
-  async resume(userId: string, id: string): Promise<RecurringTransactionDocument> {
+  async resume(
+    userId: string,
+    id: string,
+  ): Promise<RecurringTransactionDocument> {
     const doc = await this.findOne(userId, id);
     if (doc.status === RecurringStatus.COMPLETED) {
       throw new AppException(RECURRING_MESSAGES.COMPLETED_CANNOT_CHANGE_STATUS);
@@ -183,11 +219,17 @@ export class RecurringService {
     return doc;
   }
 
-  async getUpcoming(userId: string, days: number): Promise<UpcomingOccurrenceDto[]> {
+  async getUpcoming(
+    userId: string,
+    days: number,
+  ): Promise<UpcomingOccurrenceDto[]> {
     await this.catchUpAllActive(userId);
 
     const docs = await this.recurringModel
-      .find({ userId: new Types.ObjectId(userId), status: RecurringStatus.ACTIVE })
+      .find({
+        userId: new Types.ObjectId(userId),
+        status: RecurringStatus.ACTIVE,
+      })
       .exec();
 
     const windowEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -207,7 +249,11 @@ export class RecurringService {
           accountId: doc.accountId.toString(),
           dueDate: due,
         });
-        due = this.computeNextDueDate(due, doc.frequency, doc.customIntervalDays);
+        due = this.computeNextDueDate(
+          due,
+          doc.frequency,
+          doc.customIntervalDays,
+        );
         iterations++;
       }
     }
@@ -219,13 +265,20 @@ export class RecurringService {
   async getHistory(
     userId: string,
     query: QueryHistoryDto,
-  ): Promise<{ items: OccurrenceResponseDto[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+  ): Promise<{
+    items: OccurrenceResponseDto[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
     await this.catchUpAllActive(userId);
 
-    const match: Record<string, unknown> = { userId: new Types.ObjectId(userId) };
+    const match: Record<string, unknown> = {
+      userId: new Types.ObjectId(userId),
+    };
     if (query.status) match.status = query.status;
     if (query.recurringTransactionId) {
-      match.recurringTransactionId = new Types.ObjectId(query.recurringTransactionId);
+      match.recurringTransactionId = new Types.ObjectId(
+        query.recurringTransactionId,
+      );
     }
 
     const page = query.page ?? 1;
@@ -255,7 +308,9 @@ export class RecurringService {
     ];
 
     const [result] = await this.occurrenceModel.aggregate<{
-      data: (RecurringOccurrenceDocument & { recurring: RecurringTransactionDocument })[];
+      data: (RecurringOccurrenceDocument & {
+        recurring: RecurringTransactionDocument;
+      })[];
       totalCount: { count: number }[];
     }>(pipeline);
 
@@ -317,14 +372,17 @@ export class RecurringService {
       mutated = true;
 
       if (doc.autoGenerate) {
-        const transaction = await this.transactionsService.create(doc.userId.toString(), {
-          amount: doc.amount,
-          type: doc.type,
-          accountId: doc.accountId.toString(),
-          categoryId: doc.categoryId.toString(),
-          notes: doc.notes ?? doc.name,
-          transactionDate: doc.nextDueDate.toISOString(),
-        });
+        const transaction = await this.transactionsService.create(
+          doc.userId.toString(),
+          {
+            amount: doc.amount,
+            type: doc.type,
+            accountId: doc.accountId.toString(),
+            categoryId: doc.categoryId.toString(),
+            notes: doc.notes ?? doc.name,
+            transactionDate: doc.nextDueDate.toISOString(),
+          },
+        );
         await this.occurrenceModel.create({
           recurringTransactionId: doc._id,
           userId: doc.userId,
@@ -342,7 +400,11 @@ export class RecurringService {
         });
       }
 
-      const next = this.computeNextDueDate(doc.nextDueDate, doc.frequency, doc.customIntervalDays);
+      const next = this.computeNextDueDate(
+        doc.nextDueDate,
+        doc.frequency,
+        doc.customIntervalDays,
+      );
       doc.nextDueDate = next;
       iterations++;
 
@@ -359,7 +421,10 @@ export class RecurringService {
 
   private async catchUpAllActive(userId: string): Promise<void> {
     const activeDocs = await this.recurringModel
-      .find({ userId: new Types.ObjectId(userId), status: RecurringStatus.ACTIVE })
+      .find({
+        userId: new Types.ObjectId(userId),
+        status: RecurringStatus.ACTIVE,
+      })
       .exec();
     await Promise.all(activeDocs.map((doc) => this.catchUp(doc)));
   }

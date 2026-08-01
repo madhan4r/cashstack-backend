@@ -29,7 +29,12 @@ export class RecurringOccurrence {
   })
   recurringTransactionId!: Types.ObjectId;
 
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'User', required: true, index: true })
+  @Prop({
+    type: SchemaTypes.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
   userId!: Types.ObjectId;
 
   @Prop({ required: true })
@@ -42,6 +47,7 @@ export class RecurringOccurrence {
   transactionId!: Types.ObjectId | null;
 }
 
-export const RecurringOccurrenceSchema = SchemaFactory.createForClass(RecurringOccurrence);
+export const RecurringOccurrenceSchema =
+  SchemaFactory.createForClass(RecurringOccurrence);
 
 RecurringOccurrenceSchema.index({ userId: 1, dueDate: -1 });

@@ -95,7 +95,8 @@ export const RECURRING_MESSAGES = {
   RESUMED: 'Recurring transaction resumed successfully',
   NOT_FOUND: 'Recurring transaction not found',
   TRANSFER_NOT_SUPPORTED: 'Recurring transfers are not supported',
-  CATEGORY_TYPE_MISMATCH: 'Category type does not match the recurring transaction type',
+  CATEGORY_TYPE_MISMATCH:
+    'Category type does not match the recurring transaction type',
   ALREADY_PAUSED: 'Recurring transaction is already paused',
   ALREADY_ACTIVE: 'Recurring transaction is already active',
   COMPLETED_CANNOT_CHANGE_STATUS:

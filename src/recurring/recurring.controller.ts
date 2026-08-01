@@ -46,19 +46,28 @@ export class RecurringController {
       'Schedules a new recurring income or expense (e.g. Netflix subscription, monthly salary). If the start date is already due, catches up immediately.',
   })
   @ApiCreatedResponse({ type: RecurringResponseDto })
-  async create(@CurrentUser('sub') userId: string, @Body() dto: CreateRecurringDto) {
+  async create(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: CreateRecurringDto,
+  ) {
     const doc = await this.recurringService.create(userId, dto);
-    return { message: RECURRING_MESSAGES.CREATED, data: this.recurringService.toSanitized(doc) };
+    return {
+      message: RECURRING_MESSAGES.CREATED,
+      data: this.recurringService.toSanitized(doc),
+    };
   }
 
   @Get()
   @ApiOperation({
     summary: 'List recurring transactions',
     description:
-      'Lists the authenticated user\'s recurring transactions, optionally filtered by status/frequency and sorted by next due date, amount, or recency. Due schedules are caught up (generated or marked missed) before the list is returned.',
+      "Lists the authenticated user's recurring transactions, optionally filtered by status/frequency and sorted by next due date, amount, or recency. Due schedules are caught up (generated or marked missed) before the list is returned.",
   })
   @ApiOkResponse({ type: [RecurringResponseDto] })
-  async findAll(@CurrentUser('sub') userId: string, @Query() query: QueryRecurringDto) {
+  async findAll(
+    @CurrentUser('sub') userId: string,
+    @Query() query: QueryRecurringDto,
+  ) {
     const docs = await this.recurringService.findAll(userId, query);
     return {
       message: RECURRING_MESSAGES.LIST_FETCHED,
@@ -73,8 +82,14 @@ export class RecurringController {
       'Projects every active schedule forward within the given window (default 30 days) without generating anything.',
   })
   @ApiOkResponse({ type: [UpcomingOccurrenceDto] })
-  async getUpcoming(@CurrentUser('sub') userId: string, @Query() query: QueryUpcomingDto) {
-    const data = await this.recurringService.getUpcoming(userId, query.days ?? 30);
+  async getUpcoming(
+    @CurrentUser('sub') userId: string,
+    @Query() query: QueryUpcomingDto,
+  ) {
+    const data = await this.recurringService.getUpcoming(
+      userId,
+      query.days ?? 30,
+    );
     return { message: RECURRING_MESSAGES.UPCOMING_FETCHED, data };
   }
 
@@ -85,7 +100,10 @@ export class RecurringController {
       'Paginated log of every occurrence that has come due — generated transactions and missed schedules — optionally filtered by status or a single recurring transaction.',
   })
   @ApiOkResponse({ type: OccurrenceHistoryDto })
-  async getHistory(@CurrentUser('sub') userId: string, @Query() query: QueryHistoryDto) {
+  async getHistory(
+    @CurrentUser('sub') userId: string,
+    @Query() query: QueryHistoryDto,
+  ) {
     const data = await this.recurringService.getHistory(userId, query);
     return { message: RECURRING_MESSAGES.HISTORY_FETCHED, data };
   }
@@ -98,7 +116,10 @@ export class RecurringController {
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
     const doc = await this.recurringService.findOne(userId, id);
-    return { message: RECURRING_MESSAGES.FETCHED, data: this.recurringService.toSanitized(doc) };
+    return {
+      message: RECURRING_MESSAGES.FETCHED,
+      data: this.recurringService.toSanitized(doc),
+    };
   }
 
   @Patch(':id')
@@ -110,7 +131,10 @@ export class RecurringController {
     @Body() dto: UpdateRecurringDto,
   ) {
     const doc = await this.recurringService.update(userId, id, dto);
-    return { message: RECURRING_MESSAGES.UPDATED, data: this.recurringService.toSanitized(doc) };
+    return {
+      message: RECURRING_MESSAGES.UPDATED,
+      data: this.recurringService.toSanitized(doc),
+    };
   }
 
   @Delete(':id')
@@ -132,7 +156,10 @@ export class RecurringController {
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
     const doc = await this.recurringService.pause(userId, id);
-    return { message: RECURRING_MESSAGES.PAUSED, data: this.recurringService.toSanitized(doc) };
+    return {
+      message: RECURRING_MESSAGES.PAUSED,
+      data: this.recurringService.toSanitized(doc),
+    };
   }
 
   @Patch(':id/resume')
@@ -143,6 +170,9 @@ export class RecurringController {
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
     const doc = await this.recurringService.resume(userId, id);
-    return { message: RECURRING_MESSAGES.RESUMED, data: this.recurringService.toSanitized(doc) };
+    return {
+      message: RECURRING_MESSAGES.RESUMED,
+      data: this.recurringService.toSanitized(doc),
+    };
   }
 }

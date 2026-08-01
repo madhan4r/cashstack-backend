@@ -101,7 +101,10 @@ export class CategoriesController {
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
     const category = await this.categoriesService.findOne(userId, id);
-    const stats = await this.categoryStatsService.getStatsForCategory(userId, id);
+    const stats = await this.categoryStatsService.getStatsForCategory(
+      userId,
+      id,
+    );
     return {
       message: CATEGORY_MESSAGES.FETCHED,
       data: this.categoriesService.toSanitized(category, stats),

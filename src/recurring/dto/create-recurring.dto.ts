@@ -30,7 +30,8 @@ export class CreateRecurringDto {
   name!: string;
 
   @ApiProperty({
-    description: 'Only INCOME or EXPENSE — recurring transfers are not supported',
+    description:
+      'Only INCOME or EXPENSE — recurring transfers are not supported',
     enum: TransactionType,
     example: TransactionType.EXPENSE,
   })
@@ -56,7 +57,10 @@ export class CreateRecurringDto {
   @MaxLength(500)
   notes?: string;
 
-  @ApiProperty({ enum: RecurrenceFrequency, example: RecurrenceFrequency.MONTHLY })
+  @ApiProperty({
+    enum: RecurrenceFrequency,
+    example: RecurrenceFrequency.MONTHLY,
+  })
   @IsEnum(RecurrenceFrequency)
   frequency!: RecurrenceFrequency;
 
@@ -64,7 +68,9 @@ export class CreateRecurringDto {
     description: 'Interval in days — required when frequency is CUSTOM',
     example: 10,
   })
-  @ValidateIf((dto: CreateRecurringDto) => dto.frequency === RecurrenceFrequency.CUSTOM)
+  @ValidateIf(
+    (dto: CreateRecurringDto) => dto.frequency === RecurrenceFrequency.CUSTOM,
+  )
   @IsInt()
   @Min(1)
   customIntervalDays?: number;
@@ -78,13 +84,17 @@ export class CreateRecurringDto {
   @IsDateString()
   endDate?: string;
 
-  @ApiPropertyOptional({ enum: ReminderOption, example: ReminderOption.ONE_DAY_BEFORE })
+  @ApiPropertyOptional({
+    enum: ReminderOption,
+    example: ReminderOption.ONE_DAY_BEFORE,
+  })
   @IsOptional()
   @IsEnum(ReminderOption)
   reminder?: ReminderOption;
 
   @ApiPropertyOptional({
-    description: 'Automatically create the actual transaction when due (default true)',
+    description:
+      'Automatically create the actual transaction when due (default true)',
     example: true,
   })
   @IsOptional()

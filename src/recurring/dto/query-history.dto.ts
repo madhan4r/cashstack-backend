@@ -9,7 +9,9 @@ export class QueryHistoryDto extends PaginationQueryDto {
   @IsEnum(OccurrenceStatus)
   status?: OccurrenceStatus;
 
-  @ApiPropertyOptional({ description: 'Scope to a single recurring transaction' })
+  @ApiPropertyOptional({
+    description: 'Scope to a single recurring transaction',
+  })
   @IsOptional()
   @IsMongoId()
   recurringTransactionId?: string;

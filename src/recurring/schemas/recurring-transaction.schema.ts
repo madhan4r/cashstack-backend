@@ -3,7 +3,8 @@ import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import { TransactionType } from '../../transactions/enums';
 import { RecurrenceFrequency, RecurringStatus, ReminderOption } from '../enums';
 
-export type RecurringTransactionDocument = HydratedDocument<RecurringTransaction>;
+export type RecurringTransactionDocument =
+  HydratedDocument<RecurringTransaction>;
 
 @Schema({
   timestamps: true,
@@ -16,7 +17,12 @@ export type RecurringTransactionDocument = HydratedDocument<RecurringTransaction
   },
 })
 export class RecurringTransaction {
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'User', required: true, index: true })
+  @Prop({
+    type: SchemaTypes.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
+  })
   userId!: Types.ObjectId;
 
   @Prop({ required: true, trim: true, maxlength: 100 })
@@ -61,7 +67,12 @@ export class RecurringTransaction {
   @Prop({ default: true })
   autoGenerate!: boolean;
 
-  @Prop({ required: true, enum: RecurringStatus, default: RecurringStatus.ACTIVE, index: true })
+  @Prop({
+    required: true,
+    enum: RecurringStatus,
+    default: RecurringStatus.ACTIVE,
+    index: true,
+  })
   status!: RecurringStatus;
 
   /** The next date this schedule is due — advances every time an
@@ -74,7 +85,8 @@ export class RecurringTransaction {
   lastGeneratedDate!: Date | null;
 }
 
-export const RecurringTransactionSchema = SchemaFactory.createForClass(RecurringTransaction);
+export const RecurringTransactionSchema =
+  SchemaFactory.createForClass(RecurringTransaction);
 
 RecurringTransactionSchema.index({ userId: 1, status: 1 });
 RecurringTransactionSchema.index({ userId: 1, nextDueDate: 1 });

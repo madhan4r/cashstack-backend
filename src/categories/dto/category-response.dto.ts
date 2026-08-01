@@ -37,7 +37,8 @@ export class CategoryResponseDto {
 
   @ApiProperty({
     example: 1250.5,
-    description: 'Sum of every transaction amount recorded against this category',
+    description:
+      'Sum of every transaction amount recorded against this category',
   })
   totalAmount!: number;
 
