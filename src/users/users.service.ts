@@ -101,6 +101,7 @@ export class UsersService {
       fullName: user.fullName,
       email: user.email,
       isActive: user.isActive,
+      preferredCurrency: user.preferredCurrency,
       createdAt: (user as unknown as { createdAt: Date }).createdAt,
       updatedAt: (user as unknown as { updatedAt: Date }).updatedAt,
     };

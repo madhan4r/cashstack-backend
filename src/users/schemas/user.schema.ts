@@ -33,6 +33,9 @@ export class User {
   @Prop({ default: true })
   isActive!: boolean;
 
+  @Prop({ type: String, default: 'INR' })
+  preferredCurrency!: string;
+
   @Prop({ type: String, default: null, select: false })
   currentRefreshTokenHash!: string | null;
 

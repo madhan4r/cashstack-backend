@@ -3,6 +3,7 @@ export interface SanitizedUser {
   fullName: string;
   email: string;
   isActive: boolean;
+  preferredCurrency: string;
   createdAt: Date;
   updatedAt: Date;
 }
