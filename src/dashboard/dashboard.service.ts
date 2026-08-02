@@ -32,11 +32,19 @@ export class DashboardService {
   ) {}
 
   async getDashboard(userId: string): Promise<DashboardDataDto> {
+    // Resolved once and handed to every branch below — each of them would
+    // otherwise independently re-resolve it via HouseholdService, tripling
+    // the number of Mongo round-trips this endpoint makes for no reason.
+    const scopeUserIds =
+      await this.householdService.getAccessibleUserIds(userId);
+
     const [transactionFacets, accountBalances, monthlyBudget] =
       await Promise.all([
-        this.getTransactionFacets(userId),
-        this.accountBalanceService.getAccountBalances(userId),
-        this.budgetService.getAggregateAmount(userId),
+        this.getTransactionFacets(scopeUserIds),
+        this.accountBalanceService.getAccountBalances(userId, {
+          scopeUserIds,
+        }),
+        this.budgetService.getAggregateAmount(userId, scopeUserIds),
       ]);
 
     const currentBalance = accountBalances.reduce(
@@ -74,11 +82,9 @@ export class DashboardService {
   }
 
   private async getTransactionFacets(
-    userId: string,
+    scopeUserIds: string[],
   ): Promise<TransactionFacetResult> {
-    const scopeObjectIds = (
-      await this.householdService.getAccessibleUserIds(userId)
-    ).map((id) => new Types.ObjectId(id));
+    const scopeObjectIds = scopeUserIds.map((id) => new Types.ObjectId(id));
     const now = new Date();
     const { start: monthStart, end: monthEnd } = getUtcMonthRange(now);
     const trendMonths = getLastNMonths(MONTHLY_TREND_MONTHS, now);

@@ -17,8 +17,20 @@ import {
   HouseholdInviteDocument,
 } from './schemas/household-invite.schema';
 
+/** How long a resolved accessible-ids set is trusted before re-querying —
+ * long enough to collapse the several redundant lookups a single request
+ * like GET /dashboard makes (transactions, balances, budget all resolve
+ * scope independently), short enough that a just-accepted/left household
+ * shows up practically immediately everywhere. */
+const ACCESSIBLE_IDS_CACHE_TTL_MS = 5000;
+
 @Injectable()
 export class HouseholdService {
+  private readonly accessibleIdsCache = new Map<
+    string,
+    { ids: string[]; expiresAt: number }
+  >();
+
   constructor(
     @InjectModel(Household.name)
     private readonly householdModel: Model<Household>,
@@ -31,19 +43,49 @@ export class HouseholdService {
    * The one method every other feature module depends on: the set of user
    * ids whose data the caller should see/edit — just themselves if they're
    * not in a household, otherwise every member of it (themselves included).
+   *
+   * Cached briefly (see [ACCESSIBLE_IDS_CACHE_TTL_MS]) since a single
+   * request often calls this several times over — e.g. the Dashboard
+   * resolves it independently for transactions, account balances, and
+   * budget, all in parallel.
    */
   async getAccessibleUserIds(userId: string): Promise<string[]> {
+    const cached = this.accessibleIdsCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.ids;
+    }
+
     const user = await this.userModel
       .findById(userId)
       .select('householdId')
       .exec();
-    if (!user?.householdId) return [userId];
 
-    const members = await this.userModel
-      .find({ householdId: user.householdId })
-      .select('_id')
-      .exec();
-    return members.map((member) => member._id.toString());
+    const ids = !user?.householdId
+      ? [userId]
+      : (
+          await this.userModel
+            .find({ householdId: user.householdId })
+            .select('_id')
+            .exec()
+        ).map((member) => member._id.toString());
+
+    const expiresAt = Date.now() + ACCESSIBLE_IDS_CACHE_TTL_MS;
+    // Every member resolves to the same set, so seed the cache for all of
+    // them, not just the caller — a household's members hitting the
+    // Dashboard around the same time all benefit from one lookup.
+    for (const id of ids) {
+      this.accessibleIdsCache.set(id, { ids, expiresAt });
+    }
+    return ids;
+  }
+
+  /** Called after anything that changes who's in a household, so the next
+   * call to [getAccessibleUserIds] re-queries instead of serving a stale
+   * membership set for up to [ACCESSIBLE_IDS_CACHE_TTL_MS]. */
+  private invalidateAccessibleIdsCache(userIds: string[]): void {
+    for (const id of userIds) {
+      this.accessibleIdsCache.delete(id);
+    }
   }
 
   /** Same scope as [getAccessibleUserIds], but with names attached — used by
@@ -109,6 +151,7 @@ export class HouseholdService {
       await this.userModel
         .findByIdAndUpdate(inviter._id, { householdId })
         .exec();
+      this.invalidateAccessibleIdsCache([inviter._id.toString()]);
     }
 
     const invitee = await this.userModel
@@ -216,6 +259,7 @@ export class HouseholdService {
     await this.userModel
       .findByIdAndUpdate(userId, { householdId: invite.householdId })
       .exec();
+    this.invalidateAccessibleIdsCache([userId]);
   }
 
   async cancelInvite(userId: string, inviteId: string): Promise<void> {
@@ -245,6 +289,7 @@ export class HouseholdService {
     await this.userModel
       .findByIdAndUpdate(userId, { householdId: null })
       .exec();
+    this.invalidateAccessibleIdsCache([userId]);
 
     const remainingMembers = await this.userModel
       .countDocuments({ householdId })
@@ -277,6 +322,7 @@ export class HouseholdService {
     await this.userModel
       .findByIdAndUpdate(newUser._id, { householdId: invite.householdId })
       .exec();
+    this.invalidateAccessibleIdsCache([newUser._id.toString()]);
   }
 
   private async householdName(

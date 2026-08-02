@@ -24,8 +24,13 @@ export class BudgetService {
    * solo) — `null` only when nobody in scope has set one. Used by the
    * Dashboard so a household's "monthly budget" reflects everyone's caps
    * combined. */
-  async getAggregateAmount(userId: string): Promise<number | null> {
-    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
+  async getAggregateAmount(
+    userId: string,
+    scopeUserIds?: string[],
+  ): Promise<number | null> {
+    const scopeIds =
+      scopeUserIds ??
+      (await this.householdService.getAccessibleUserIds(userId));
     const budgets = await this.budgetModel
       .find({ userId: { $in: scopeIds } })
       .exec();

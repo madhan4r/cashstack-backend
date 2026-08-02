@@ -13,6 +13,10 @@ export interface AccountBalanceOptions {
   asOf?: Date;
   /** Include archived accounts (soft-deleted accounts are always excluded). Defaults to false. */
   includeArchived?: boolean;
+  /** Skips the household lookup when the caller already resolved it — e.g.
+   * DashboardService resolves scope once and passes it to every parallel
+   * branch instead of each one re-querying it independently. */
+  scopeUserIds?: string[];
 }
 
 /**
@@ -35,7 +39,8 @@ export class AccountBalanceService {
     options: AccountBalanceOptions = {},
   ): Promise<AccountBalanceAggregate[]> {
     const scopeObjectIds = (
-      await this.householdService.getAccessibleUserIds(userId)
+      options.scopeUserIds ??
+      (await this.householdService.getAccessibleUserIds(userId))
     ).map((id) => new Types.ObjectId(id));
 
     const accountMatch: Record<string, unknown> = {
