@@ -14,6 +14,8 @@ export const AUTH_MESSAGES = {
   RESET_PASSWORD_SUCCESS:
     'Password reset successfully. Please log in with your new password',
   INVALID_RESET_TOKEN: 'Invalid or expired password reset token',
+  CHANGE_PASSWORD_SUCCESS: 'Password changed successfully',
+  INCORRECT_CURRENT_PASSWORD: 'Current password is incorrect',
 } as const;
 
 export const USER_MESSAGES = {
@@ -101,4 +103,8 @@ export const RECURRING_MESSAGES = {
   ALREADY_ACTIVE: 'Recurring transaction is already active',
   COMPLETED_CANNOT_CHANGE_STATUS:
     'This recurring transaction has completed and its status can no longer be changed',
+} as const;
+
+export const FEEDBACK_MESSAGES = {
+  SUBMITTED: 'Thanks for the feedback!',
 } as const;

@@ -11,6 +11,7 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
 import { RecurringModule } from './recurring/recurring.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -33,6 +34,7 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
     DashboardModule,
     ReportsModule,
     RecurringModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [

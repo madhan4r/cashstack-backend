@@ -16,6 +16,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { TokenPairDto } from './dto/auth-response.dto';
 
 const PASSWORD_RESET_TOKEN_TYPE = 'password_reset';
@@ -161,6 +162,29 @@ export class AuthService {
 
     const passwordHash = await hashValue(dto.newPassword);
     await this.usersService.resetPassword(user._id.toString(), passwordHash);
+  }
+
+  /** Changes the password for the currently authenticated user, verifying
+   * their current password first. Invalidates the refresh token, same as
+   * a token-based reset, so every session must sign in again. */
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    const user = await this.usersService.findByIdWithPassword(userId);
+    if (!user) {
+      throw new InvalidCredentialsException(AUTH_MESSAGES.USER_NOT_FOUND);
+    }
+
+    const isCurrentPasswordValid = await verifyHash(
+      user.password,
+      dto.currentPassword,
+    );
+    if (!isCurrentPasswordValid) {
+      throw new InvalidCredentialsException(
+        AUTH_MESSAGES.INCORRECT_CURRENT_PASSWORD,
+      );
+    }
+
+    const passwordHash = await hashValue(dto.newPassword);
+    await this.usersService.resetPassword(userId, passwordHash);
   }
 
   private async verifyResetToken(

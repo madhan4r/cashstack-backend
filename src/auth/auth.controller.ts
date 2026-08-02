@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -23,6 +24,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthResponseDto, TokenPairDto } from './dto/auth-response.dto';
 import { UsersService } from '../users/users.service';
 
@@ -131,6 +133,26 @@ export class AuthController {
     await this.authService.resetPassword(dto);
     return {
       message: AUTH_MESSAGES.RESET_PASSWORD_SUCCESS,
+      data: null,
+    };
+  }
+
+  @Patch('change-password')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Change password',
+    description:
+      "Changes the currently authenticated user's password after verifying their current password. Invalidates the refresh token, so every session must sign in again.",
+  })
+  @ApiOkResponse({ description: 'Password changed successfully' })
+  async changePassword(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    await this.authService.changePassword(userId, dto);
+    return {
+      message: AUTH_MESSAGES.CHANGE_PASSWORD_SUCCESS,
       data: null,
     };
   }

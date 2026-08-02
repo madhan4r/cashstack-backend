@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import helmet from 'helmet';
+import { json } from 'express';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
 
@@ -12,6 +13,9 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
   app.use(compression());
+  // Default express body limit (100kb) is too small for the base64
+  // screenshot attached to feedback submissions.
+  app.use(json({ limit: '10mb' }));
   app.enableCors({
     origin: appConfigService.app.clientUrl,
     credentials: true,

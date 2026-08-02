@@ -40,6 +40,10 @@ export class UsersService {
       .exec();
   }
 
+  async findByIdWithPassword(id: string): Promise<UserDocument | null> {
+    return this.userModel.findById(id).select('+password').exec();
+  }
+
   async findByIdWithRefreshToken(id: string): Promise<UserDocument | null> {
     return this.userModel
       .findById(id)
