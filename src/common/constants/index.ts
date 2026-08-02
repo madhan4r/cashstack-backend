@@ -113,4 +113,19 @@ export const BUDGET_MESSAGES = {
   FETCHED: 'Budget fetched successfully',
   SET: 'Budget set successfully',
   CLEARED: 'Budget cleared successfully',
+  CATEGORY_BUDGETS_FETCHED: 'Category budgets fetched successfully',
+  CATEGORY_BUDGET_SET: 'Category budget set successfully',
+  CATEGORY_BUDGET_CLEARED: 'Category budget cleared successfully',
+} as const;
+
+export const SAVINGS_GOAL_MESSAGES = {
+  CREATED: 'Savings goal created successfully',
+  UPDATED: 'Savings goal updated successfully',
+  DELETED: 'Savings goal deleted successfully',
+  FETCHED: 'Savings goal fetched successfully',
+  LIST_FETCHED: 'Savings goals fetched successfully',
+  CONTRIBUTED: 'Contribution recorded successfully',
+  NOT_FOUND: 'Savings goal not found',
+  WITHDRAWAL_EXCEEDS_BALANCE:
+    "Withdrawal can't exceed the current saved amount",
 } as const;

@@ -2,14 +2,23 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BudgetController } from './budget.controller';
 import { BudgetService } from './budget.service';
+import { CategoryBudgetController } from './category-budget.controller';
+import { CategoryBudgetService } from './category-budget.service';
 import { Budget, BudgetSchema } from './schemas/budget.schema';
+import {
+  CategoryBudget,
+  CategoryBudgetSchema,
+} from './schemas/category-budget.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Budget.name, schema: BudgetSchema }]),
+    MongooseModule.forFeature([
+      { name: Budget.name, schema: BudgetSchema },
+      { name: CategoryBudget.name, schema: CategoryBudgetSchema },
+    ]),
   ],
-  controllers: [BudgetController],
-  providers: [BudgetService],
-  exports: [BudgetService],
+  controllers: [BudgetController, CategoryBudgetController],
+  providers: [BudgetService, CategoryBudgetService],
+  exports: [BudgetService, CategoryBudgetService],
 })
 export class BudgetModule {}

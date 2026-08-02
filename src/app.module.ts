@@ -13,6 +13,7 @@ import { ReportsModule } from './reports/reports.module';
 import { RecurringModule } from './recurring/recurring.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { BudgetModule } from './budget/budget.module';
+import { SavingsGoalsModule } from './savings-goals/savings-goals.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -37,6 +38,7 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
     RecurringModule,
     FeedbackModule,
     BudgetModule,
+    SavingsGoalsModule,
   ],
   controllers: [AppController],
   providers: [
