@@ -8,6 +8,7 @@ import { BudgetService } from '../budget/budget.service';
 import { Transaction } from '../transactions/schemas/transaction.schema';
 import { TransactionType } from '../transactions/enums';
 import { getLastNMonths, getUtcMonthRange } from '../common/utils';
+import { HouseholdService } from '../household/household.service';
 import {
   AccountSummaryDto,
   DashboardDataDto,
@@ -27,6 +28,7 @@ export class DashboardService {
     private readonly transactionModel: Model<Transaction>,
     private readonly accountBalanceService: AccountBalanceService,
     private readonly budgetService: BudgetService,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async getDashboard(userId: string): Promise<DashboardDataDto> {
@@ -34,7 +36,7 @@ export class DashboardService {
       await Promise.all([
         this.getTransactionFacets(userId),
         this.accountBalanceService.getAccountBalances(userId),
-        this.budgetService.getAmount(userId),
+        this.budgetService.getAggregateAmount(userId),
       ]);
 
     const currentBalance = accountBalances.reduce(
@@ -74,7 +76,9 @@ export class DashboardService {
   private async getTransactionFacets(
     userId: string,
   ): Promise<TransactionFacetResult> {
-    const userObjectId = new Types.ObjectId(userId);
+    const scopeObjectIds = (
+      await this.householdService.getAccessibleUserIds(userId)
+    ).map((id) => new Types.ObjectId(id));
     const now = new Date();
     const { start: monthStart, end: monthEnd } = getUtcMonthRange(now);
     const trendMonths = getLastNMonths(MONTHLY_TREND_MONTHS, now);
@@ -83,7 +87,7 @@ export class DashboardService {
     );
 
     const pipeline: PipelineStage[] = [
-      { $match: { userId: userObjectId } },
+      { $match: { userId: { $in: scopeObjectIds } } },
       {
         $facet: {
           recentTransactions: [

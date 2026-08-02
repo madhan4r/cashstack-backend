@@ -8,6 +8,7 @@ import {
   ResourceAlreadyExistsException,
   ResourceNotFoundException,
 } from '../common/exceptions';
+import { HouseholdService } from '../household/household.service';
 import { DEFAULT_CATEGORIES } from './constants';
 import { CategoryType } from './enums';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -26,6 +27,7 @@ export class CategoriesService implements OnModuleInit {
     @InjectModel(Category.name)
     private readonly categoryModel: Model<Category>,
     private readonly categoryStatsService: CategoryStatsService,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -50,17 +52,19 @@ export class CategoriesService implements OnModuleInit {
   }
 
   async findAll(userId: string): Promise<CategoryDocument[]> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     return this.categoryModel
-      .find({ $or: [{ userId }, { isDefault: true }] })
+      .find({ $or: [{ userId: { $in: scopeIds } }, { isDefault: true }] })
       .sort({ type: 1, name: 1 })
       .exec();
   }
 
   async findOne(userId: string, categoryId: string): Promise<CategoryDocument> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const category = await this.categoryModel
       .findOne({
         _id: categoryId,
-        $or: [{ userId }, { isDefault: true }],
+        $or: [{ userId: { $in: scopeIds } }, { isDefault: true }],
       })
       .exec();
 

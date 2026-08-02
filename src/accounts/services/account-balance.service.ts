@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, Types } from 'mongoose';
 import { TransactionType } from '../../transactions/enums';
+import { HouseholdService } from '../../household/household.service';
 import { Account } from '../schemas/account.schema';
 import { AccountBalanceAggregate } from '../interfaces';
 
@@ -26,16 +27,19 @@ export interface AccountBalanceOptions {
 export class AccountBalanceService {
   constructor(
     @InjectModel(Account.name) private readonly accountModel: Model<Account>,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async getAccountBalances(
     userId: string,
     options: AccountBalanceOptions = {},
   ): Promise<AccountBalanceAggregate[]> {
-    const userObjectId = new Types.ObjectId(userId);
+    const scopeObjectIds = (
+      await this.householdService.getAccessibleUserIds(userId)
+    ).map((id) => new Types.ObjectId(id));
 
     const accountMatch: Record<string, unknown> = {
-      userId: userObjectId,
+      userId: { $in: scopeObjectIds },
       isDeleted: false,
     };
 
@@ -62,7 +66,11 @@ export class AccountBalanceService {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ['$userId', userObjectId] },
+                    // Not `$eq` to a single owner — a household member can
+                    // create a transaction against another member's account,
+                    // so the ledger entry's own userId no longer has to
+                    // match the account's owner, just be someone in scope.
+                    { $in: ['$userId', scopeObjectIds] },
                     {
                       $or: [
                         { $eq: ['$accountId', '$$accountId'] },
@@ -149,14 +157,16 @@ export class AccountBalanceService {
     userId: string,
     accountId: string,
   ): Promise<AccountStats | null> {
-    const userObjectId = new Types.ObjectId(userId);
+    const scopeObjectIds = (
+      await this.householdService.getAccessibleUserIds(userId)
+    ).map((id) => new Types.ObjectId(id));
     const accountObjectId = new Types.ObjectId(accountId);
 
     const pipeline: PipelineStage[] = [
       {
         $match: {
           _id: accountObjectId,
-          userId: userObjectId,
+          userId: { $in: scopeObjectIds },
           isDeleted: false,
         },
       },
@@ -169,7 +179,7 @@ export class AccountBalanceService {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ['$userId', userObjectId] },
+                    { $in: ['$userId', scopeObjectIds] },
                     {
                       $or: [
                         { $eq: ['$accountId', '$$accountId'] },

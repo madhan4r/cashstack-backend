@@ -118,6 +118,21 @@ export const BUDGET_MESSAGES = {
   CATEGORY_BUDGET_CLEARED: 'Category budget cleared successfully',
 } as const;
 
+export const HOUSEHOLD_MESSAGES = {
+  INVITED: 'Invite sent',
+  INVITE_ACCEPTED: "You've joined the household",
+  INVITE_DECLINED: 'Invite declined',
+  INVITE_CANCELLED: 'Invite cancelled',
+  INVITE_NOT_FOUND: 'Invite not found',
+  LEFT: "You've left the household",
+  FETCHED: 'Household fetched successfully',
+  INVITES_FETCHED: 'Pending invites fetched successfully',
+  CANNOT_INVITE_SELF: "You can't invite yourself",
+  ALREADY_A_MEMBER: 'This person is already in your household',
+  ALREADY_IN_ANOTHER_HOUSEHOLD:
+    'Leave your current household before joining another one',
+} as const;
+
 export const SAVINGS_GOAL_MESSAGES = {
   CREATED: 'Savings goal created successfully',
   UPDATED: 'Savings goal updated successfully',

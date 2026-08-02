@@ -7,6 +7,7 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { TransactionType } from '../transactions/enums';
 import { AppException, ResourceNotFoundException } from '../common/exceptions';
 import { RECURRING_MESSAGES } from '../common/constants';
+import { HouseholdService } from '../household/household.service';
 import { CreateRecurringDto } from './dto/create-recurring.dto';
 import { UpdateRecurringDto } from './dto/update-recurring.dto';
 import { QueryRecurringDto } from './dto/query-recurring.dto';
@@ -49,6 +50,7 @@ export class RecurringService {
     private readonly accountsService: AccountsService,
     private readonly categoriesService: CategoriesService,
     private readonly transactionsService: TransactionsService,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async create(
@@ -93,8 +95,9 @@ export class RecurringService {
   ): Promise<RecurringTransactionDocument[]> {
     await this.catchUpAllActive(userId);
 
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const match: Record<string, unknown> = {
-      userId: new Types.ObjectId(userId),
+      userId: { $in: scopeIds.map((id) => new Types.ObjectId(id)) },
     };
     if (query.status) match.status = query.status;
     if (query.frequency) match.frequency = query.frequency;
@@ -109,7 +112,10 @@ export class RecurringService {
     userId: string,
     id: string,
   ): Promise<RecurringTransactionDocument> {
-    const doc = await this.recurringModel.findOne({ _id: id, userId }).exec();
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
+    const doc = await this.recurringModel
+      .findOne({ _id: id, userId: { $in: scopeIds } })
+      .exec();
     if (!doc) {
       throw new ResourceNotFoundException(RECURRING_MESSAGES.NOT_FOUND);
     }
@@ -225,9 +231,10 @@ export class RecurringService {
   ): Promise<UpcomingOccurrenceDto[]> {
     await this.catchUpAllActive(userId);
 
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const docs = await this.recurringModel
       .find({
-        userId: new Types.ObjectId(userId),
+        userId: { $in: scopeIds.map((id) => new Types.ObjectId(id)) },
         status: RecurringStatus.ACTIVE,
       })
       .exec();
@@ -271,8 +278,9 @@ export class RecurringService {
   }> {
     await this.catchUpAllActive(userId);
 
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const match: Record<string, unknown> = {
-      userId: new Types.ObjectId(userId),
+      userId: { $in: scopeIds.map((id) => new Types.ObjectId(id)) },
     };
     if (query.status) match.status = query.status;
     if (query.recurringTransactionId) {
@@ -420,9 +428,10 @@ export class RecurringService {
   }
 
   private async catchUpAllActive(userId: string): Promise<void> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const activeDocs = await this.recurringModel
       .find({
-        userId: new Types.ObjectId(userId),
+        userId: { $in: scopeIds.map((id) => new Types.ObjectId(id)) },
         status: RecurringStatus.ACTIVE,
       })
       .exec();

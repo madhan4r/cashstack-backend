@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { HouseholdModule } from '../household/household.module';
 import { BudgetController } from './budget.controller';
 import { BudgetService } from './budget.service';
 import { CategoryBudgetController } from './category-budget.controller';
@@ -16,6 +17,7 @@ import {
       { name: Budget.name, schema: BudgetSchema },
       { name: CategoryBudget.name, schema: CategoryBudgetSchema },
     ]),
+    HouseholdModule,
   ],
   controllers: [BudgetController, CategoryBudgetController],
   providers: [BudgetService, CategoryBudgetService],

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AccountsModule } from '../accounts/accounts.module';
 import { BudgetModule } from '../budget/budget.module';
+import { HouseholdModule } from '../household/household.module';
 import {
   Transaction,
   TransactionSchema,
@@ -16,6 +17,7 @@ import { DashboardService } from './dashboard.service';
     ]),
     AccountsModule,
     BudgetModule,
+    HouseholdModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],

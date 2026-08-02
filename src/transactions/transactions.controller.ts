@@ -20,6 +20,7 @@ import {
 import { CurrentUser } from '../common/decorators';
 import { ParseObjectIdPipe } from '../common/pipes';
 import { TRANSACTION_MESSAGES } from '../common/constants';
+import { HouseholdService } from '../household/household.service';
 import { TransactionsService } from './transactions.service';
 import {
   CreateTransactionDto,
@@ -33,7 +34,10 @@ import {
 @ApiBearerAuth()
 @Controller({ path: 'transactions', version: '1' })
 export class TransactionsController {
-  constructor(private readonly transactionsService: TransactionsService) {}
+  constructor(
+    private readonly transactionsService: TransactionsService,
+    private readonly householdService: HouseholdService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -51,9 +55,13 @@ export class TransactionsController {
     @Body() dto: CreateTransactionDto,
   ) {
     const transaction = await this.transactionsService.create(userId, dto);
+    const names = await this.householdService.getAccessibleUserNames(userId);
     return {
       message: TRANSACTION_MESSAGES.CREATED,
-      data: this.transactionsService.toSanitized(transaction),
+      data: this.transactionsService.toSanitized(
+        transaction,
+        names.get(userId) ?? '',
+      ),
     };
   }
 
@@ -71,12 +79,18 @@ export class TransactionsController {
     @CurrentUser('sub') userId: string,
     @Query() query: QueryTransactionsDto,
   ) {
-    const result = await this.transactionsService.findAll(userId, query);
+    const [result, names] = await Promise.all([
+      this.transactionsService.findAll(userId, query),
+      this.householdService.getAccessibleUserNames(userId),
+    ]);
     return {
       message: TRANSACTION_MESSAGES.LIST_FETCHED,
       data: {
         items: result.items.map((transaction) =>
-          this.transactionsService.toSanitized(transaction),
+          this.transactionsService.toSanitized(
+            transaction,
+            names.get(transaction.userId.toString()) ?? '',
+          ),
         ),
         meta: result.meta,
       },
@@ -98,9 +112,13 @@ export class TransactionsController {
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
     const transaction = await this.transactionsService.findOne(userId, id);
+    const names = await this.householdService.getAccessibleUserNames(userId);
     return {
       message: TRANSACTION_MESSAGES.FETCHED,
-      data: this.transactionsService.toSanitized(transaction),
+      data: this.transactionsService.toSanitized(
+        transaction,
+        names.get(transaction.userId.toString()) ?? '',
+      ),
     };
   }
 
@@ -120,9 +138,13 @@ export class TransactionsController {
     @Body() dto: UpdateTransactionDto,
   ) {
     const transaction = await this.transactionsService.update(userId, id, dto);
+    const names = await this.householdService.getAccessibleUserNames(userId);
     return {
       message: TRANSACTION_MESSAGES.UPDATED,
-      data: this.transactionsService.toSanitized(transaction),
+      data: this.transactionsService.toSanitized(
+        transaction,
+        names.get(transaction.userId.toString()) ?? '',
+      ),
     };
   }
 

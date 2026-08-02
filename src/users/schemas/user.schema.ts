@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -41,6 +41,17 @@ export class User {
 
   @Prop({ type: String, default: null, select: false })
   passwordResetTokenHash!: string | null;
+
+  /** A user belongs to at most one household at a time — joining a new one
+   * (accepting an invite) requires leaving the current one first. `null`
+   * means every accounts/transactions/etc. query scopes to this user alone. */
+  @Prop({
+    type: SchemaTypes.ObjectId,
+    ref: 'Household',
+    default: null,
+    index: true,
+  })
+  householdId!: Types.ObjectId | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

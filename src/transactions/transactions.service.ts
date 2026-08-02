@@ -5,6 +5,7 @@ import { AccountsService } from '../accounts/accounts.service';
 import { CategoriesService } from '../categories/categories.service';
 import { AppException, ResourceNotFoundException } from '../common/exceptions';
 import { TRANSACTION_MESSAGES } from '../common/constants';
+import { HouseholdService } from '../household/household.service';
 import { TransactionSort, TransactionType } from './enums';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
@@ -26,6 +27,7 @@ export class TransactionsService {
     private readonly transactionModel: Model<Transaction>,
     private readonly accountsService: AccountsService,
     private readonly categoriesService: CategoriesService,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async create(
@@ -54,7 +56,7 @@ export class TransactionsService {
     userId: string,
     query: QueryTransactionsDto,
   ): Promise<PaginatedResult<TransactionDocument>> {
-    const match = this.buildMatchStage(userId, query);
+    const match = await this.buildMatchStage(userId, query);
     const sortStage = this.buildSortStage(query.sort);
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
@@ -92,8 +94,9 @@ export class TransactionsService {
     userId: string,
     transactionId: string,
   ): Promise<TransactionDocument> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const transaction = await this.transactionModel
-      .findOne({ _id: transactionId, userId })
+      .findOne({ _id: transactionId, userId: { $in: scopeIds } })
       .exec();
 
     if (!transaction) {
@@ -143,7 +146,10 @@ export class TransactionsService {
     await transaction.deleteOne();
   }
 
-  toSanitized(transaction: TransactionDocument): SanitizedTransaction {
+  toSanitized(
+    transaction: TransactionDocument,
+    ownerName: string = '',
+  ): SanitizedTransaction {
     return {
       id: transaction._id.toString(),
       amount: transaction.amount,
@@ -156,6 +162,8 @@ export class TransactionsService {
       paymentMethod: transaction.paymentMethod,
       transactionDate: transaction.transactionDate,
       tags: transaction.tags,
+      ownerId: transaction.userId.toString(),
+      ownerName,
       createdAt: (transaction as unknown as { createdAt: Date }).createdAt,
       updatedAt: (transaction as unknown as { updatedAt: Date }).updatedAt,
     };
@@ -228,12 +236,13 @@ export class TransactionsService {
     });
   }
 
-  private buildMatchStage(
+  private async buildMatchStage(
     userId: string,
     query: QueryTransactionsDto,
-  ): Record<string, unknown> {
+  ): Promise<Record<string, unknown>> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const match: Record<string, unknown> = {
-      userId: new Types.ObjectId(userId),
+      userId: { $in: scopeIds.map((id) => new Types.ObjectId(id)) },
     };
 
     if (query.fromDate || query.toDate) {

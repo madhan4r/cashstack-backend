@@ -12,6 +12,8 @@ export interface SanitizedTransaction {
   paymentMethod: PaymentMethod | null;
   transactionDate: Date;
   tags: string[];
+  ownerId: string;
+  ownerName: string;
   createdAt: Date;
   updatedAt: Date;
 }

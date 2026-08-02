@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AccountsModule } from '../accounts/accounts.module';
 import { CategoriesModule } from '../categories/categories.module';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { HouseholdModule } from '../household/household.module';
 import { RecurringController } from './recurring.controller';
 import { RecurringService } from './recurring.service';
 import {
@@ -23,6 +24,7 @@ import {
     AccountsModule,
     CategoriesModule,
     TransactionsModule,
+    HouseholdModule,
   ],
   controllers: [RecurringController],
   providers: [RecurringService],

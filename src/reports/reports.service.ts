@@ -5,6 +5,7 @@ import { AccountBalanceService } from '../accounts/services/account-balance.serv
 import { Account } from '../accounts/schemas/account.schema';
 import { Transaction } from '../transactions/schemas/transaction.schema';
 import { TransactionType } from '../transactions/enums';
+import { HouseholdService } from '../household/household.service';
 import {
   getMonthsOfYear,
   getUtcDayRange,
@@ -54,13 +55,14 @@ export class ReportsService {
     private readonly transactionModel: Model<Transaction>,
     @InjectModel(Account.name) private readonly accountModel: Model<Account>,
     private readonly accountBalanceService: AccountBalanceService,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async getSummary(
     userId: string,
     filters: SummaryReportQueryDto,
   ): Promise<SummaryReportDto> {
-    const match = this.buildTransactionMatch(userId, filters);
+    const match = await this.buildTransactionMatch(userId, filters);
 
     const pipeline: PipelineStage[] = [
       { $match: match },
@@ -109,7 +111,7 @@ export class ReportsService {
       end: new Date(Date.UTC(year, month, 1)),
     };
 
-    const match = this.buildTransactionMatch(userId, query, window);
+    const match = await this.buildTransactionMatch(userId, query, window);
     const incomeExpenseMatch = {
       type: { $in: [TransactionType.INCOME, TransactionType.EXPENSE] },
     };
@@ -192,7 +194,7 @@ export class ReportsService {
   ): Promise<YearlyReportDto> {
     const year = query.year ?? new Date().getUTCFullYear();
     const window = getUtcYearRange(new Date(Date.UTC(year, 0, 1)));
-    const match = this.buildTransactionMatch(userId, query, window);
+    const match = await this.buildTransactionMatch(userId, query, window);
 
     const pipeline: PipelineStage[] = [
       {
@@ -258,7 +260,7 @@ export class ReportsService {
       ...query,
       transactionType: query.transactionType ?? TransactionType.EXPENSE,
     };
-    const match = this.buildTransactionMatch(userId, effectiveFilters);
+    const match = await this.buildTransactionMatch(userId, effectiveFilters);
     if (match.categoryId === undefined) {
       match.categoryId = { $ne: null };
     }
@@ -328,12 +330,14 @@ export class ReportsService {
     userId: string,
     query: AccountReportQueryDto,
   ): Promise<AccountReportDto> {
-    const userObjectId = new Types.ObjectId(userId);
+    const scopeObjectIds = (
+      await this.householdService.getAccessibleUserIds(userId)
+    ).map((id) => new Types.ObjectId(id));
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
     const accountMatch: Record<string, unknown> = {
-      userId: userObjectId,
+      userId: { $in: scopeObjectIds },
       isDeleted: false,
     };
     if (query.accountId) {
@@ -362,7 +366,7 @@ export class ReportsService {
     }
 
     const accountIds = accounts.map((account) => account._id);
-    const match = this.buildTransactionMatch(userId, {
+    const match = await this.buildTransactionMatch(userId, {
       fromDate: query.fromDate,
       toDate: query.toDate,
       categoryId: query.categoryId,
@@ -511,7 +515,7 @@ export class ReportsService {
     filters: ReportFilterDto,
     window: DateWindow,
   ): Promise<{ moneyIn: number; moneyOut: number }> {
-    const match = this.buildTransactionMatch(userId, filters, window);
+    const match = await this.buildTransactionMatch(userId, filters, window);
 
     let pipeline: PipelineStage[];
 
@@ -672,13 +676,16 @@ export class ReportsService {
    * transactionType/tags) reused by every report. `dateWindow` overrides
    * fromDate/toDate when a report is scoped to a fixed period (e.g. a specific month).
    */
-  private buildTransactionMatch(
+  private async buildTransactionMatch(
     userId: string,
     filters: ReportFilterDto,
     dateWindow?: DateWindow,
-  ): Record<string, unknown> {
+  ): Promise<Record<string, unknown>> {
+    const scopeObjectIds = (
+      await this.householdService.getAccessibleUserIds(userId)
+    ).map((id) => new Types.ObjectId(id));
     const match: Record<string, unknown> = {
-      userId: new Types.ObjectId(userId),
+      userId: { $in: scopeObjectIds },
     };
 
     if (dateWindow) {

@@ -12,6 +12,7 @@ import { JwtPayload } from '../common/interfaces';
 import { hashValue, verifyHash } from '../common/utils';
 import { UsersService } from '../users/users.service';
 import { UserDocument } from '../users/schemas/user.schema';
+import { HouseholdService } from '../household/household.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -35,6 +36,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly appConfigService: AppConfigService,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async register(
@@ -53,6 +55,11 @@ export class AuthService {
       dto.email,
       passwordHash,
     );
+
+    // No email delivery is wired up yet (see forgotPassword's note), so a
+    // household invite to someone without an account yet can only ever be
+    // consumed here — the moment they register with the invited email.
+    await this.householdService.autoJoinPendingInvite(user);
 
     const tokens = await this.issueTokens(user);
     return { user, tokens };

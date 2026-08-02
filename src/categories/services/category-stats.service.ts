@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection, Types } from 'mongoose';
+import { HouseholdService } from '../../household/household.service';
 import { CategoryStats } from '../interfaces';
 
 /**
@@ -12,15 +13,18 @@ import { CategoryStats } from '../interfaces';
  */
 @Injectable()
 export class CategoryStatsService {
-  constructor(@InjectConnection() private readonly connection: Connection) {}
+  constructor(
+    @InjectConnection() private readonly connection: Connection,
+    private readonly householdService: HouseholdService,
+  ) {}
 
   async getStatsByCategory(
     userId: string,
     categoryIds?: string[],
   ): Promise<Map<string, CategoryStats>> {
-    const userObjectId = new Types.ObjectId(userId);
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const match: Record<string, unknown> = {
-      userId: userObjectId,
+      userId: { $in: scopeIds.map((id) => new Types.ObjectId(id)) },
       categoryId: { $ne: null },
     };
 

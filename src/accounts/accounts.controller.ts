@@ -19,6 +19,7 @@ import {
 import { CurrentUser } from '../common/decorators';
 import { ParseObjectIdPipe } from '../common/pipes';
 import { ACCOUNT_MESSAGES } from '../common/constants';
+import { HouseholdService } from '../household/household.service';
 import { AccountsService } from './accounts.service';
 import { AccountBalanceService } from './services/account-balance.service';
 import {
@@ -35,6 +36,7 @@ export class AccountsController {
   constructor(
     private readonly accountsService: AccountsService,
     private readonly accountBalanceService: AccountBalanceService,
+    private readonly householdService: HouseholdService,
   ) {}
 
   @Post()
@@ -53,9 +55,10 @@ export class AccountsController {
     @Body() dto: CreateAccountDto,
   ) {
     const account = await this.accountsService.create(userId, dto);
+    const names = await this.householdService.getAccessibleUserNames(userId);
     return {
       message: ACCOUNT_MESSAGES.CREATED,
-      data: this.accountsService.toSanitized(account),
+      data: this.accountsService.toSanitized(account, names.get(userId) ?? ''),
     };
   }
 
@@ -70,11 +73,12 @@ export class AccountsController {
     type: [AccountResponseDto],
   })
   async findAll(@CurrentUser('sub') userId: string) {
-    const [accounts, balances] = await Promise.all([
+    const [accounts, balances, names] = await Promise.all([
       this.accountsService.findAll(userId),
       this.accountBalanceService.getAccountBalances(userId, {
         includeArchived: true,
       }),
+      this.householdService.getAccessibleUserNames(userId),
     ]);
     const balanceById = new Map(
       balances.map((balance) => [balance._id.toString(), balance.balance]),
@@ -83,7 +87,10 @@ export class AccountsController {
     return {
       message: ACCOUNT_MESSAGES.LIST_FETCHED,
       data: accounts.map((account) => ({
-        ...this.accountsService.toSanitized(account),
+        ...this.accountsService.toSanitized(
+          account,
+          names.get(account.userId.toString()) ?? '',
+        ),
         balance:
           balanceById.get(account._id.toString()) ?? account.openingBalance,
       })),
@@ -104,18 +111,22 @@ export class AccountsController {
     @CurrentUser('sub') userId: string,
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
-    const [account, balances] = await Promise.all([
+    const [account, balances, names] = await Promise.all([
       this.accountsService.findOne(userId, id),
       this.accountBalanceService.getAccountBalances(userId, {
         accountId: id,
         includeArchived: true,
       }),
+      this.householdService.getAccessibleUserNames(userId),
     ]);
 
     return {
       message: ACCOUNT_MESSAGES.FETCHED,
       data: {
-        ...this.accountsService.toSanitized(account),
+        ...this.accountsService.toSanitized(
+          account,
+          names.get(account.userId.toString()) ?? '',
+        ),
         balance: balances[0]?.balance ?? account.openingBalance,
       },
     };
@@ -165,9 +176,13 @@ export class AccountsController {
     @Body() dto: UpdateAccountDto,
   ) {
     const account = await this.accountsService.update(userId, id, dto);
+    const names = await this.householdService.getAccessibleUserNames(userId);
     return {
       message: ACCOUNT_MESSAGES.UPDATED,
-      data: this.accountsService.toSanitized(account),
+      data: this.accountsService.toSanitized(
+        account,
+        names.get(account.userId.toString()) ?? '',
+      ),
     };
   }
 
@@ -203,9 +218,13 @@ export class AccountsController {
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
     const account = await this.accountsService.archive(userId, id);
+    const names = await this.householdService.getAccessibleUserNames(userId);
     return {
       message: ACCOUNT_MESSAGES.ARCHIVED,
-      data: this.accountsService.toSanitized(account),
+      data: this.accountsService.toSanitized(
+        account,
+        names.get(account.userId.toString()) ?? '',
+      ),
     };
   }
 
@@ -223,9 +242,13 @@ export class AccountsController {
     @Param('id', ParseObjectIdPipe) id: string,
   ) {
     const account = await this.accountsService.unarchive(userId, id);
+    const names = await this.householdService.getAccessibleUserNames(userId);
     return {
       message: ACCOUNT_MESSAGES.UNARCHIVED,
-      data: this.accountsService.toSanitized(account),
+      data: this.accountsService.toSanitized(
+        account,
+        names.get(account.userId.toString()) ?? '',
+      ),
     };
   }
 }

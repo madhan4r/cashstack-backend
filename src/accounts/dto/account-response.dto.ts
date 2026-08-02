@@ -35,6 +35,16 @@ export class AccountResponseDto {
   @ApiProperty({ example: false })
   isArchived!: boolean;
 
+  @ApiProperty({ example: '64f1c2e5b3f1a2c3d4e5f6a7' })
+  ownerId!: string;
+
+  @ApiProperty({
+    example: 'Jane Doe',
+    description:
+      'Who this account belongs to — only interesting when it differs from you, i.e. a household member’s account',
+  })
+  ownerName!: string;
+
   @ApiProperty({ example: '2024-01-01T00:00:00.000Z' })
   createdAt!: Date;
 

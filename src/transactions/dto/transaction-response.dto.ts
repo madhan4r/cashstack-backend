@@ -39,6 +39,16 @@ export class TransactionResponseDto {
   @ApiProperty({ example: ['groceries', 'weekly'], type: [String] })
   tags!: string[];
 
+  @ApiProperty({ example: '64f1c2e5b3f1a2c3d4e5f6a7' })
+  ownerId!: string;
+
+  @ApiProperty({
+    example: 'Jane Doe',
+    description:
+      'Who added this transaction — only interesting when it differs from you, i.e. a household member added it',
+  })
+  ownerName!: string;
+
   @ApiProperty({ example: '2024-01-01T00:00:00.000Z' })
   createdAt!: Date;
 

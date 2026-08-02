@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AppException, ResourceNotFoundException } from '../common/exceptions';
 import { SAVINGS_GOAL_MESSAGES } from '../common/constants';
+import { HouseholdService } from '../household/household.service';
 import { CreateSavingsGoalDto } from './dto/create-savings-goal.dto';
 import { SavingsGoalResponseDto } from './dto/savings-goal-response.dto';
 import { UpdateSavingsGoalDto } from './dto/update-savings-goal.dto';
@@ -16,6 +17,7 @@ export class SavingsGoalsService {
   constructor(
     @InjectModel(SavingsGoal.name)
     private readonly savingsGoalModel: Model<SavingsGoal>,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async create(
@@ -33,15 +35,17 @@ export class SavingsGoalsService {
   }
 
   async findAll(userId: string): Promise<SavingsGoalDocument[]> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     return this.savingsGoalModel
-      .find({ userId })
+      .find({ userId: { $in: scopeIds } })
       .sort({ createdAt: -1 })
       .exec();
   }
 
   async findOne(userId: string, id: string): Promise<SavingsGoalDocument> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const goal = await this.savingsGoalModel
-      .findOne({ _id: id, userId })
+      .findOne({ _id: id, userId: { $in: scopeIds } })
       .exec();
     if (!goal) {
       throw new ResourceNotFoundException(SAVINGS_GOAL_MESSAGES.NOT_FOUND);

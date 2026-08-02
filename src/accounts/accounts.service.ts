@@ -6,6 +6,7 @@ import {
   ResourceAlreadyExistsException,
   ResourceNotFoundException,
 } from '../common/exceptions';
+import { HouseholdService } from '../household/household.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 import { SanitizedAccount } from './interfaces';
@@ -17,12 +18,16 @@ const MONGO_DUPLICATE_KEY_ERROR_CODE = 11000;
 export class AccountsService {
   constructor(
     @InjectModel(Account.name) private readonly accountModel: Model<Account>,
+    private readonly householdService: HouseholdService,
   ) {}
 
   async create(
     userId: string,
     dto: CreateAccountDto,
   ): Promise<AccountDocument> {
+    // Uniqueness stays scoped to the creator, not the whole household — the
+    // underlying schema index is per-`userId`, since accounts stay
+    // individually owned even once shared (see HouseholdService's doc).
     await this.ensureNameIsUnique(userId, dto.name);
 
     try {
@@ -33,15 +38,17 @@ export class AccountsService {
   }
 
   async findAll(userId: string): Promise<AccountDocument[]> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     return this.accountModel
-      .find({ userId, isDeleted: false })
+      .find({ userId: { $in: scopeIds }, isDeleted: false })
       .sort({ createdAt: -1 })
       .exec();
   }
 
   async findOne(userId: string, accountId: string): Promise<AccountDocument> {
+    const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const account = await this.accountModel
-      .findOne({ _id: accountId, userId, isDeleted: false })
+      .findOne({ _id: accountId, userId: { $in: scopeIds }, isDeleted: false })
       .exec();
 
     if (!account) {
@@ -90,7 +97,10 @@ export class AccountsService {
     return account.save();
   }
 
-  toSanitized(account: AccountDocument): SanitizedAccount {
+  toSanitized(
+    account: AccountDocument,
+    ownerName: string = '',
+  ): SanitizedAccount {
     return {
       id: account._id.toString(),
       name: account.name,
@@ -101,6 +111,8 @@ export class AccountsService {
       icon: account.icon,
       description: account.description,
       isArchived: account.isArchived,
+      ownerId: account.userId.toString(),
+      ownerName,
       createdAt: (account as unknown as { createdAt: Date }).createdAt,
       updatedAt: (account as unknown as { updatedAt: Date }).updatedAt,
     };
