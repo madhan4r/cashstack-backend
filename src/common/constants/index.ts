@@ -108,3 +108,9 @@ export const RECURRING_MESSAGES = {
 export const FEEDBACK_MESSAGES = {
   SUBMITTED: 'Thanks for the feedback!',
 } as const;
+
+export const BUDGET_MESSAGES = {
+  FETCHED: 'Budget fetched successfully',
+  SET: 'Budget set successfully',
+  CLEARED: 'Budget cleared successfully',
+} as const;

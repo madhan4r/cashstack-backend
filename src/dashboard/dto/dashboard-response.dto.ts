@@ -135,10 +135,16 @@ export class DashboardDataDto {
   })
   monthlySavings!: number;
 
+  @ApiPropertyOptional({
+    example: 30000,
+    nullable: true,
+    description: "The user's set monthly budget, or null if none is set",
+  })
+  monthlyBudget!: number | null;
+
   @ApiProperty({
-    example: 0,
-    description:
-      'Remaining budget for the current month. Always 0 until the Budgets module is implemented.',
+    example: 3000,
+    description: 'monthlyBudget minus monthlyExpense; 0 when no budget is set',
   })
   budgetRemaining!: number;
 

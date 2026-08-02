@@ -4,6 +4,7 @@ import { Model, PipelineStage, Types } from 'mongoose';
 import { AccountBalanceService } from '../accounts/services/account-balance.service';
 import { AccountBalanceAggregate } from '../accounts/interfaces';
 import { AccountType } from '../accounts/enums';
+import { BudgetService } from '../budget/budget.service';
 import { Transaction } from '../transactions/schemas/transaction.schema';
 import { TransactionType } from '../transactions/enums';
 import { getLastNMonths, getUtcMonthRange } from '../common/utils';
@@ -18,8 +19,6 @@ import { MonthlyTrendAggregate, TransactionFacetResult } from './interfaces';
 
 const RECENT_TRANSACTIONS_LIMIT = 10;
 const MONTHLY_TREND_MONTHS = 6;
-// Budgets are not implemented yet; kept as a stable field until that module exists.
-const BUDGET_REMAINING_PLACEHOLDER = 0;
 
 @Injectable()
 export class DashboardService {
@@ -27,13 +26,16 @@ export class DashboardService {
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
     private readonly accountBalanceService: AccountBalanceService,
+    private readonly budgetService: BudgetService,
   ) {}
 
   async getDashboard(userId: string): Promise<DashboardDataDto> {
-    const [transactionFacets, accountBalances] = await Promise.all([
-      this.getTransactionFacets(userId),
-      this.accountBalanceService.getAccountBalances(userId),
-    ]);
+    const [transactionFacets, accountBalances, monthlyBudget] =
+      await Promise.all([
+        this.getTransactionFacets(userId),
+        this.accountBalanceService.getAccountBalances(userId),
+        this.budgetService.getAmount(userId),
+      ]);
 
     const currentBalance = accountBalances.reduce(
       (sum, account) => sum + account.balance,
@@ -54,7 +56,9 @@ export class DashboardService {
       monthlyIncome,
       monthlyExpense,
       monthlySavings: monthlyIncome - monthlyExpense,
-      budgetRemaining: BUDGET_REMAINING_PLACEHOLDER,
+      monthlyBudget,
+      budgetRemaining:
+        monthlyBudget != null ? monthlyBudget - monthlyExpense : 0,
       recentTransactions: this.mapRecentTransactions(
         transactionFacets.recentTransactions,
       ),
