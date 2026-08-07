@@ -132,6 +132,7 @@ export const HOUSEHOLD_MESSAGES = {
   ALREADY_IN_ANOTHER_HOUSEHOLD:
     'Leave your current household before joining another one',
   VIEW_MODE_UPDATED: 'View mode updated',
+  NOT_SAME_HOUSEHOLD: "You can only view a household member's data",
 } as const;
 
 export const SAVINGS_GOAL_MESSAGES = {

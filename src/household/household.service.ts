@@ -5,6 +5,7 @@ import { HOUSEHOLD_MESSAGES } from '../common/constants';
 import {
   AppException,
   ConflictActionException,
+  ForbiddenActionException,
   ResourceNotFoundException,
 } from '../common/exceptions';
 import { User, UserDocument } from '../users/schemas/user.schema';
@@ -79,6 +80,34 @@ export class HouseholdService {
       this.accessibleIdsCache.set(id, { ids, expiresAt });
     }
     return ids;
+  }
+
+  /**
+   * Lets a member "peek" at a specific other member's data regardless of
+   * their own combine/separate [HouseholdViewMode] — used by the read-only
+   * member-detail views (e.g. `GET /accounts/member/:memberId`) so seeing
+   * one person's accounts doesn't require switching your own global view
+   * mode to COMBINED. Throws if they don't currently share a household.
+   */
+  async assertSharesHousehold(
+    callerId: string,
+    memberId: string,
+  ): Promise<void> {
+    if (callerId === memberId) return;
+
+    const [caller, member] = await Promise.all([
+      this.userModel.findById(callerId).select('householdId').exec(),
+      this.userModel.findById(memberId).select('householdId').exec(),
+    ]);
+
+    const shareHousehold =
+      caller?.householdId &&
+      member?.householdId &&
+      caller.householdId.toString() === member.householdId.toString();
+
+    if (!shareHousehold) {
+      throw new ForbiddenActionException(HOUSEHOLD_MESSAGES.NOT_SAME_HOUSEHOLD);
+    }
   }
 
   /** Called after anything that changes who's in a household, so the next

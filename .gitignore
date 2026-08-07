@@ -3,6 +3,10 @@
 /node_modules
 /build
 
+# User-uploaded files (avatars, ...) — persisted on disk on the server,
+# never committed. See AppConfig.uploadsDir.
+/uploads
+
 # Logs
 logs
 *.log

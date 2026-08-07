@@ -99,6 +99,19 @@ export class UsersService {
       .exec();
   }
 
+  async setAvatarUrl(
+    id: string,
+    avatarUrl: string | null,
+  ): Promise<UserDocument> {
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { avatarUrl }, { new: true })
+      .exec();
+    if (!user) {
+      throw new ResourceNotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
+    }
+    return user;
+  }
+
   toSanitized(user: UserDocument): SanitizedUser {
     return {
       id: user._id.toString(),
@@ -106,6 +119,7 @@ export class UsersService {
       email: user.email,
       isActive: user.isActive,
       preferredCurrency: user.preferredCurrency,
+      avatarUrl: user.avatarUrl,
       createdAt: (user as unknown as { createdAt: Date }).createdAt,
       updatedAt: (user as unknown as { updatedAt: Date }).updatedAt,
     };

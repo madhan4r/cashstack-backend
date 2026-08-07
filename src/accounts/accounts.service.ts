@@ -45,6 +45,18 @@ export class AccountsService {
       .exec();
   }
 
+  /** Exactly one member's own accounts, ignoring the caller's own combine/
+   * separate view mode entirely — used by the "view a member's data"
+   * read-only peek (`GET /accounts/member/:memberId`), which has already
+   * separately verified the caller shares a household with `memberId` via
+   * `HouseholdService.assertSharesHousehold`. */
+  async findAllForUser(memberId: string): Promise<AccountDocument[]> {
+    return this.accountModel
+      .find({ userId: memberId, isDeleted: false })
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
   async findOne(userId: string, accountId: string): Promise<AccountDocument> {
     const scopeIds = await this.householdService.getAccessibleUserIds(userId);
     const account = await this.accountModel

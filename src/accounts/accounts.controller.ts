@@ -97,6 +97,50 @@ export class AccountsController {
     };
   }
 
+  @Get('member/:memberId')
+  @ApiOperation({
+    summary: "View a household member's accounts (read-only)",
+    description:
+      "Lets you peek at a specific household member's accounts regardless " +
+      "of your own combine/separate household view mode — you don't have " +
+      "to switch to combined just to look at one person's accounts. 403s " +
+      "if you don't currently share a household with them.",
+  })
+  @ApiOkResponse({
+    description: "Member's accounts fetched successfully",
+    type: [AccountResponseDto],
+  })
+  async findAllForMember(
+    @CurrentUser('sub') userId: string,
+    @Param('memberId') memberId: string,
+  ) {
+    await this.householdService.assertSharesHousehold(userId, memberId);
+
+    const [accounts, balances, names] = await Promise.all([
+      this.accountsService.findAllForUser(memberId),
+      this.accountBalanceService.getAccountBalances(memberId, {
+        includeArchived: true,
+        scopeUserIds: [memberId],
+      }),
+      this.householdService.getAccessibleUserNames(userId),
+    ]);
+    const balanceById = new Map(
+      balances.map((balance) => [balance._id.toString(), balance.balance]),
+    );
+
+    return {
+      message: ACCOUNT_MESSAGES.LIST_FETCHED,
+      data: accounts.map((account) => ({
+        ...this.accountsService.toSanitized(
+          account,
+          names.get(account.userId.toString()) ?? '',
+        ),
+        balance:
+          balanceById.get(account._id.toString()) ?? account.openingBalance,
+      })),
+    };
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get an account by ID',

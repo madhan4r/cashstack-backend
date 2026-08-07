@@ -63,6 +63,13 @@ export class User {
     default: HouseholdViewMode.COMBINED,
   })
   householdViewMode!: HouseholdViewMode;
+
+  /** Relative path (e.g. `/uploads/avatars/<file>`), not an absolute URL —
+   * the backend's own origin can change between environments, so the
+   * frontend joins this onto its configured API origin. `null` until the
+   * user uploads one. */
+  @Prop({ type: String, default: null })
+  avatarUrl!: string | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

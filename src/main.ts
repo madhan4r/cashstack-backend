@@ -1,5 +1,6 @@
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import helmet from 'helmet';
@@ -8,7 +9,7 @@ import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const appConfigService = app.get(AppConfigService);
 
   app.use(helmet());
@@ -16,6 +17,10 @@ async function bootstrap(): Promise<void> {
   // Default express body limit (100kb) is too small for the base64
   // screenshot attached to feedback submissions.
   app.use(json({ limit: '10mb' }));
+  // Serves uploaded avatars, etc. at /uploads/* — independent of the /api
+  // prefix set below, and of `dist/`, so it survives a rebuild/redeploy
+  // (see AppConfig.uploadsDir).
+  app.useStaticAssets(appConfigService.app.uploadsDir, { prefix: '/uploads' });
   app.enableCors({
     origin: appConfigService.app.clientUrl,
     credentials: true,

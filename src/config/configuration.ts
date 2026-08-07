@@ -1,7 +1,13 @@
+import { join } from 'path';
+
 export interface AppConfig {
   nodeEnv: string;
   port: number;
   clientUrl: string;
+  /** Absolute path on disk where uploaded files (avatars, ...) are stored.
+   * Deliberately outside `dist/` (which `nest build` wipes and regenerates
+   * every deploy) so uploads survive a redeploy. */
+  uploadsDir: string;
 }
 
 export interface DatabaseConfig {
@@ -20,6 +26,7 @@ export default () => ({
     nodeEnv: process.env.NODE_ENV ?? 'development',
     port: parseInt(process.env.PORT ?? '3000', 10),
     clientUrl: process.env.CLIENT_URL,
+    uploadsDir: process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads'),
   },
   database: {
     uri: process.env.MONGO_URI,
