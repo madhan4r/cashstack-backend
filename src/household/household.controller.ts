@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
 } from '@nestjs/common';
 import {
@@ -22,6 +23,7 @@ import {
   HouseholdResponseDto,
   InviteMemberDto,
   RespondToInviteDto,
+  SetViewModeDto,
 } from './dto';
 import { HouseholdService } from './household.service';
 
@@ -101,6 +103,22 @@ export class HouseholdController {
   ) {
     await this.householdService.cancelInvite(userId, id);
     return { message: HOUSEHOLD_MESSAGES.INVITE_CANCELLED, data: null };
+  }
+
+  @Patch('view-mode')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Set whether you see the household combined or just your own data',
+    description:
+      'A personal preference, not a household-wide setting — other members are unaffected by your choice.',
+  })
+  @ApiOkResponse({ description: 'View mode updated successfully' })
+  async setViewMode(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: SetViewModeDto,
+  ) {
+    await this.householdService.setViewMode(userId, dto.mode);
+    return { message: HOUSEHOLD_MESSAGES.VIEW_MODE_UPDATED, data: null };
   }
 
   @Post('leave')

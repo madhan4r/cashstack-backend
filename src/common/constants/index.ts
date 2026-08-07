@@ -131,6 +131,7 @@ export const HOUSEHOLD_MESSAGES = {
   ALREADY_A_MEMBER: 'This person is already in your household',
   ALREADY_IN_ANOTHER_HOUSEHOLD:
     'Leave your current household before joining another one',
+  VIEW_MODE_UPDATED: 'View mode updated',
 } as const;
 
 export const SAVINGS_GOAL_MESSAGES = {

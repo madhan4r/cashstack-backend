@@ -368,16 +368,52 @@ export class RecurringService {
    * MISSED occurrence, then advances `nextDueDate`. Marks the schedule
    * COMPLETED once it advances past `endDate`. No-op for non-ACTIVE
    * schedules or schedules that aren't due yet.
+   *
+   * `catchUp` gets triggered from several read endpoints (`findAll`,
+   * `getUpcoming`, `getHistory`, …), so two requests can end up calling it
+   * for the *same* schedule at roughly the same moment (e.g. two screens
+   * loading together right after login). The old version only persisted
+   * via `doc.save()` at the very end of the whole loop, so both concurrent
+   * calls would read the same stale `nextDueDate`, each independently
+   * decide the period was due, and each generate its own transaction —
+   * a duplicate. Each period is now claimed with an atomic
+   * `findOneAndUpdate` keyed on the exact `nextDueDate` it read: if another
+   * call already advanced it, the match fails and this call stops instead
+   * of generating a second transaction for the same period.
    */
   private async catchUp(doc: RecurringTransactionDocument): Promise<void> {
     if (doc.status !== RecurringStatus.ACTIVE) return;
 
-    const now = new Date();
     let iterations = 0;
-    let mutated = false;
 
-    while (doc.nextDueDate <= now && iterations < MAX_CATCHUP_ITERATIONS) {
-      mutated = true;
+    while (iterations < MAX_CATCHUP_ITERATIONS) {
+      const now = new Date();
+      if (doc.nextDueDate > now) break;
+
+      const dueDate = doc.nextDueDate;
+      const next = this.computeNextDueDate(
+        dueDate,
+        doc.frequency,
+        doc.customIntervalDays,
+      );
+      const willComplete = doc.endDate != null && next > doc.endDate;
+
+      const claimed = await this.recurringModel
+        .findOneAndUpdate(
+          { _id: doc._id, nextDueDate: dueDate },
+          {
+            $set: {
+              nextDueDate: next,
+              ...(willComplete ? { status: RecurringStatus.COMPLETED } : {}),
+            },
+          },
+        )
+        .exec();
+
+      if (!claimed) {
+        // A concurrent call already processed this exact period.
+        break;
+      }
 
       if (doc.autoGenerate) {
         const transaction = await this.transactionsService.create(
@@ -388,42 +424,36 @@ export class RecurringService {
             accountId: doc.accountId.toString(),
             categoryId: doc.categoryId.toString(),
             notes: doc.notes ?? doc.name,
-            transactionDate: doc.nextDueDate.toISOString(),
+            transactionDate: dueDate.toISOString(),
           },
         );
         await this.occurrenceModel.create({
           recurringTransactionId: doc._id,
           userId: doc.userId,
-          dueDate: doc.nextDueDate,
+          dueDate,
           status: OccurrenceStatus.GENERATED,
           transactionId: transaction._id,
         });
-        doc.lastGeneratedDate = doc.nextDueDate;
+        doc.lastGeneratedDate = dueDate;
+        await this.recurringModel
+          .updateOne({ _id: doc._id }, { $set: { lastGeneratedDate: dueDate } })
+          .exec();
       } else {
         await this.occurrenceModel.create({
           recurringTransactionId: doc._id,
           userId: doc.userId,
-          dueDate: doc.nextDueDate,
+          dueDate,
           status: OccurrenceStatus.MISSED,
         });
       }
 
-      const next = this.computeNextDueDate(
-        doc.nextDueDate,
-        doc.frequency,
-        doc.customIntervalDays,
-      );
       doc.nextDueDate = next;
       iterations++;
 
-      if (doc.endDate && next > doc.endDate) {
+      if (willComplete) {
         doc.status = RecurringStatus.COMPLETED;
         break;
       }
-    }
-
-    if (mutated) {
-      await doc.save();
     }
   }
 

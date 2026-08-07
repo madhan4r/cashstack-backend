@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
+import { HouseholdViewMode } from '../../household/enums';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -52,6 +53,16 @@ export class User {
     index: true,
   })
   householdId!: Types.ObjectId | null;
+
+  /** This member's own preference for whether they currently see the
+   * household's data pooled together or just their own — see
+   * `HouseholdViewMode`. Irrelevant while `householdId` is `null`. */
+  @Prop({
+    type: String,
+    enum: HouseholdViewMode,
+    default: HouseholdViewMode.COMBINED,
+  })
+  householdViewMode!: HouseholdViewMode;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

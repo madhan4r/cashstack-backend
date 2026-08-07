@@ -10,7 +10,7 @@ import {
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { HouseholdInviteResponseDto } from './dto/household-invite-response.dto';
 import { HouseholdResponseDto } from './dto/household-response.dto';
-import { HouseholdInviteStatus } from './enums';
+import { HouseholdInviteStatus, HouseholdViewMode } from './enums';
 import { Household, HouseholdDocument } from './schemas/household.schema';
 import {
   HouseholdInvite,
@@ -57,17 +57,19 @@ export class HouseholdService {
 
     const user = await this.userModel
       .findById(userId)
-      .select('householdId')
+      .select('householdId householdViewMode')
       .exec();
 
-    const ids = !user?.householdId
-      ? [userId]
-      : (
-          await this.userModel
-            .find({ householdId: user.householdId })
-            .select('_id')
-            .exec()
-        ).map((member) => member._id.toString());
+    const isSeparate = user?.householdViewMode === HouseholdViewMode.SEPARATE;
+    const ids =
+      !user?.householdId || isSeparate
+        ? [userId]
+        : (
+            await this.userModel
+              .find({ householdId: user.householdId })
+              .select('_id')
+              .exec()
+          ).map((member) => member._id.toString());
 
     const expiresAt = Date.now() + ACCESSIBLE_IDS_CACHE_TTL_MS;
     // Every member resolves to the same set, so seed the cache for all of
@@ -111,7 +113,7 @@ export class HouseholdService {
   async getMyHousehold(userId: string): Promise<HouseholdResponseDto | null> {
     const user = await this.userModel
       .findById(userId)
-      .select('householdId')
+      .select('householdId householdViewMode')
       .exec();
     if (!user?.householdId) return null;
 
@@ -124,7 +126,17 @@ export class HouseholdService {
     ]);
     if (!household) return null;
 
-    return this.toHouseholdResponse(household, members);
+    return this.toHouseholdResponse(household, members, user.householdViewMode);
+  }
+
+  /** Sets the caller's own combine/separate preference — see
+   * [HouseholdViewMode]. A no-op call (setting the mode they're already in)
+   * still safely re-invalidates the cache, so this never leaves it stale. */
+  async setViewMode(userId: string, mode: HouseholdViewMode): Promise<void> {
+    await this.userModel
+      .findByIdAndUpdate(userId, { householdViewMode: mode })
+      .exec();
+    this.invalidateAccessibleIdsCache([userId]);
   }
 
   /** Auto-creates a household for the caller if they don't have one yet. */
@@ -335,10 +347,12 @@ export class HouseholdService {
   private toHouseholdResponse(
     household: HouseholdDocument,
     members: UserDocument[],
+    viewMode: HouseholdViewMode,
   ): HouseholdResponseDto {
     return {
       id: household._id.toString(),
       name: household.name,
+      viewMode,
       members: members.map((member) => ({
         id: member._id.toString(),
         fullName: member.fullName,
