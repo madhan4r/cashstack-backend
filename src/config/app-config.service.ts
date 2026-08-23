@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AppConfig, DatabaseConfig, JwtConfig } from './configuration';
+import {
+  AppConfig,
+  DatabaseConfig,
+  FirebaseConfig,
+  JwtConfig,
+} from './configuration';
 
 @Injectable()
 export class AppConfigService {
@@ -16,6 +21,10 @@ export class AppConfigService {
 
   get jwt(): JwtConfig {
     return this.configService.getOrThrow<JwtConfig>('jwt');
+  }
+
+  get firebase(): FirebaseConfig {
+    return this.configService.getOrThrow<FirebaseConfig>('firebase');
   }
 
   get isProduction(): boolean {

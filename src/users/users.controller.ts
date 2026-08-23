@@ -22,6 +22,7 @@ import { CurrentUser } from '../common/decorators';
 import { USER_MESSAGES } from '../common/constants';
 import { AppException } from '../common/exceptions';
 import type { JwtPayload } from '../common/interfaces';
+import { RegisterPushTokenDto } from '../notifications/dto';
 import { UpdateProfileDto, UserResponseDto } from './dto';
 import { AvatarService } from './services/avatar.service';
 import { UsersService } from './users.service';
@@ -140,5 +141,33 @@ export class UsersController {
       message: USER_MESSAGES.PROFILE_UPDATED,
       data: this.usersService.toSanitized(user),
     };
+  }
+
+  @Post('me/push-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Register a device's FCM push token for the current user",
+    description:
+      'Idempotent — registering the same token twice (e.g. app reinstall) is a no-op.',
+  })
+  async registerPushToken(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: RegisterPushTokenDto,
+  ) {
+    await this.usersService.addPushToken(userId, dto.token);
+    return { message: USER_MESSAGES.PUSH_TOKEN_REGISTERED };
+  }
+
+  @Delete('me/push-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Unregister a device's FCM push token, e.g. on logout",
+  })
+  async unregisterPushToken(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: RegisterPushTokenDto,
+  ) {
+    await this.usersService.removePushToken(userId, dto.token);
+    return { message: USER_MESSAGES.PUSH_TOKEN_UNREGISTERED };
   }
 }

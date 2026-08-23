@@ -16,6 +16,7 @@ module.exports = {
       log_file: './logs/pm2-combined.log',
       env: {
         NODE_ENV: 'production',
+        FIREBASE_SERVICE_ACCOUNT_PATH: '/etc/cashstack/firebase-admin.json'
       },
     },
   ],

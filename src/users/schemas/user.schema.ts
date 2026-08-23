@@ -70,6 +70,13 @@ export class User {
    * user uploads one. */
   @Prop({ type: String, default: null })
   avatarUrl!: string | null;
+
+  /** FCM registration tokens for this user's devices — a device can be
+   * removed/reinstalled without ever calling the unregister endpoint, so
+   * this is pruned lazily whenever a send comes back with an
+   * invalid/unregistered-token error, not eagerly. */
+  @Prop({ type: [String], default: [] })
+  pushTokens!: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

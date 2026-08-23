@@ -10,6 +10,15 @@ export interface AppConfig {
   uploadsDir: string;
 }
 
+export interface FirebaseConfig {
+  /** Path to the Firebase Admin SDK service-account JSON (Firebase Console
+   * > Project Settings > Service Accounts > Generate new private key).
+   * `null` disables push sending entirely — `PushNotificationService`
+   * no-ops rather than throwing, so the rest of the app works fine without
+   * it configured (e.g. in local dev). */
+  serviceAccountPath: string | null;
+}
+
 export interface DatabaseConfig {
   uri: string;
 }
@@ -27,6 +36,9 @@ export default () => ({
     port: parseInt(process.env.PORT ?? '3000', 10),
     clientUrl: process.env.CLIENT_URL,
     uploadsDir: process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads'),
+  },
+  firebase: {
+    serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? null,
   },
   database: {
     uri: process.env.MONGO_URI,

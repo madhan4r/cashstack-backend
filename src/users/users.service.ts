@@ -112,6 +112,27 @@ export class UsersService {
     return user;
   }
 
+  async addPushToken(id: string, token: string): Promise<void> {
+    await this.userModel
+      .findByIdAndUpdate(id, { $addToSet: { pushTokens: token } })
+      .exec();
+  }
+
+  async removePushToken(id: string, token: string): Promise<void> {
+    await this.userModel
+      .findByIdAndUpdate(id, { $pull: { pushTokens: token } })
+      .exec();
+  }
+
+  /** Drops tokens FCM has reported as invalid/unregistered — called by
+   * `PushNotificationService` after a send, never from user-facing flows. */
+  async removePushTokens(id: string, tokens: string[]): Promise<void> {
+    if (tokens.length === 0) return;
+    await this.userModel
+      .findByIdAndUpdate(id, { $pull: { pushTokens: { $in: tokens } } })
+      .exec();
+  }
+
   toSanitized(user: UserDocument): SanitizedUser {
     return {
       id: user._id.toString(),

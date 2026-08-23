@@ -21,6 +21,8 @@ export const AUTH_MESSAGES = {
 export const USER_MESSAGES = {
   PROFILE_FETCHED: 'Profile fetched successfully',
   PROFILE_UPDATED: 'Profile updated successfully',
+  PUSH_TOKEN_REGISTERED: 'Push token registered',
+  PUSH_TOKEN_UNREGISTERED: 'Push token unregistered',
 } as const;
 
 export const ACCOUNT_MESSAGES = {
