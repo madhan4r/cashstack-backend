@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, Types } from 'mongoose';
 import { AccountsService } from '../accounts/accounts.service';
+import { AccountAlertService } from '../accounts/services/account-alert.service';
 import { BudgetAlertService } from '../budget/budget-alert.service';
 import { CategoriesService } from '../categories/categories.service';
 import { AppException, ResourceNotFoundException } from '../common/exceptions';
@@ -30,6 +31,7 @@ export class TransactionsService {
     private readonly categoriesService: CategoriesService,
     private readonly householdService: HouseholdService,
     private readonly budgetAlertService: BudgetAlertService,
+    private readonly accountAlertService: AccountAlertService,
   ) {}
 
   async create(
@@ -64,6 +66,16 @@ export class TransactionsService {
           userId,
           resolvedFields.categoryId.toString(),
         );
+      }
+    }
+
+    for (const accountId of [
+      resolvedFields.accountId,
+      resolvedFields.fromAccountId,
+      resolvedFields.toAccountId,
+    ]) {
+      if (accountId) {
+        void this.accountAlertService.check(accountId.toString());
       }
     }
 

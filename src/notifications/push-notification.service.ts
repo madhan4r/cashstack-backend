@@ -4,6 +4,7 @@ import { App, cert, initializeApp, ServiceAccount } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import { AppConfigService } from '../config/app-config.service';
 import { UsersService } from '../users/users.service';
+import { NotificationRecordService } from './notification-record.service';
 
 export interface PushPayload {
   title: string;
@@ -27,6 +28,7 @@ export class PushNotificationService implements OnModuleInit {
   constructor(
     private readonly appConfigService: AppConfigService,
     private readonly usersService: UsersService,
+    private readonly notificationRecordService: NotificationRecordService,
   ) {}
 
   onModuleInit(): void {
@@ -51,6 +53,12 @@ export class PushNotificationService implements OnModuleInit {
   }
 
   async sendToUser(userId: string, payload: PushPayload): Promise<void> {
+    // Always recorded for the in-app notification center, even when the
+    // FCM send below no-ops (Firebase not configured, no device token) —
+    // from the caller's perspective a notification-worthy event happened
+    // regardless of whether a push actually reached a device.
+    await this.notificationRecordService.record(userId, payload);
+
     if (!this.app) return;
 
     const user = await this.usersService.findById(userId);

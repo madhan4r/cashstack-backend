@@ -120,6 +120,13 @@ export const BUDGET_MESSAGES = {
   CATEGORY_BUDGET_CLEARED: 'Category budget cleared successfully',
 } as const;
 
+export const NOTIFICATION_MESSAGES = {
+  FETCHED: 'Notifications fetched successfully',
+  NOT_FOUND: 'Notification not found',
+  MARKED_READ: 'Notification marked as read',
+  ALL_MARKED_READ: 'All notifications marked as read',
+} as const;
+
 export const HOUSEHOLD_MESSAGES = {
   INVITED: 'Invite sent',
   INVITE_ACCEPTED: "You've joined the household",

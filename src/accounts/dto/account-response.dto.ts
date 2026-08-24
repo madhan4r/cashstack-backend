@@ -35,6 +35,13 @@ export class AccountResponseDto {
   @ApiProperty({ example: false })
   isArchived!: boolean;
 
+  @ApiPropertyOptional({
+    example: 500,
+    nullable: true,
+    description: 'Balance below which a low-balance push is sent',
+  })
+  lowBalanceThreshold!: number | null;
+
   @ApiProperty({ example: '64f1c2e5b3f1a2c3d4e5f6a7' })
   ownerId!: string;
 

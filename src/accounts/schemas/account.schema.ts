@@ -52,6 +52,18 @@ export class Account {
 
   @Prop({ type: Date, default: null })
   deletedAt!: Date | null;
+
+  /** `null` disables low-balance alerts for this account. */
+  @Prop({ type: Number, default: null })
+  lowBalanceThreshold!: number | null;
+
+  /** Arm/disarm flag rather than a per-period dedup ledger (contrast with
+   * budget alerts, which reset monthly): balance can drop below and climb
+   * back above the threshold arbitrarily often, and each new dip below
+   * should re-alert. Set true on send, reset to false once the balance
+   * recovers above the threshold — see AccountAlertService. */
+  @Prop({ default: false })
+  lowBalanceAlertActive!: boolean;
 }
 
 export const AccountSchema = SchemaFactory.createForClass(Account);

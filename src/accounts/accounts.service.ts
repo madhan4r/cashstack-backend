@@ -123,6 +123,7 @@ export class AccountsService {
       icon: account.icon,
       description: account.description,
       isArchived: account.isArchived,
+      lowBalanceThreshold: account.lowBalanceThreshold,
       ownerId: account.userId.toString(),
       ownerName,
       createdAt: (account as unknown as { createdAt: Date }).createdAt,

@@ -77,4 +77,16 @@ export class CreateAccountDto {
   @IsString()
   @MaxLength(500)
   description?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Balance below which a low-balance push is sent. Omit/null to disable.',
+    example: 500,
+    minimum: 0,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  lowBalanceThreshold?: number | null;
 }

@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { HouseholdModule } from '../household/household.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AccountsController } from './accounts.controller';
 import { AccountsService } from './accounts.service';
+import { AccountAlertService } from './services/account-alert.service';
 import { AccountBalanceService } from './services/account-balance.service';
 import { Account, AccountSchema } from './schemas/account.schema';
 
@@ -10,9 +12,10 @@ import { Account, AccountSchema } from './schemas/account.schema';
   imports: [
     MongooseModule.forFeature([{ name: Account.name, schema: AccountSchema }]),
     HouseholdModule,
+    NotificationsModule,
   ],
   controllers: [AccountsController],
-  providers: [AccountsService, AccountBalanceService],
-  exports: [AccountsService, AccountBalanceService],
+  providers: [AccountsService, AccountBalanceService, AccountAlertService],
+  exports: [AccountsService, AccountBalanceService, AccountAlertService],
 })
 export class AccountsModule {}

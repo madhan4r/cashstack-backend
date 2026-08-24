@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AppException, ResourceNotFoundException } from '../common/exceptions';
 import { SAVINGS_GOAL_MESSAGES } from '../common/constants';
 import { HouseholdService } from '../household/household.service';
+import { PushNotificationService } from '../notifications/push-notification.service';
 import { CreateSavingsGoalDto } from './dto/create-savings-goal.dto';
 import { SavingsGoalResponseDto } from './dto/savings-goal-response.dto';
 import { UpdateSavingsGoalDto } from './dto/update-savings-goal.dto';
@@ -12,12 +13,19 @@ import {
   SavingsGoalDocument,
 } from './schemas/savings-goal.schema';
 
+/** Checked highest-first, same reasoning as budget alerts — only the
+ * highest newly-crossed milestone fires per contribution. */
+const MILESTONES = [100, 90, 50];
+
 @Injectable()
 export class SavingsGoalsService {
+  private readonly logger = new Logger(SavingsGoalsService.name);
+
   constructor(
     @InjectModel(SavingsGoal.name)
     private readonly savingsGoalModel: Model<SavingsGoal>,
     private readonly householdService: HouseholdService,
+    private readonly pushNotificationService: PushNotificationService,
   ) {}
 
   async create(
@@ -93,7 +101,49 @@ export class SavingsGoalsService {
 
     goal.currentAmount = newAmount;
     await goal.save();
+
+    if (amount > 0) {
+      // Only a genuine contribution can newly cross a milestone — a
+      // withdrawal only ever moves currentAmount down.
+      await this.checkMilestones(goal);
+    }
+
     return goal;
+  }
+
+  private async checkMilestones(goal: SavingsGoalDocument): Promise<void> {
+    try {
+      const percent = (goal.currentAmount / goal.targetAmount) * 100;
+
+      for (const milestone of MILESTONES) {
+        if (percent < milestone || goal.lastAlertedMilestone >= milestone) {
+          continue;
+        }
+
+        goal.lastAlertedMilestone = milestone;
+        await goal.save();
+
+        const body =
+          milestone >= 100
+            ? `You've reached your "${goal.name}" savings goal!`
+            : `You're ${milestone}% of the way to your "${goal.name}" savings goal`;
+        await this.pushNotificationService.sendToUser(goal.userId.toString(), {
+          title: 'Savings goal progress',
+          body,
+          data: {
+            type: 'savings_goal_milestone',
+            savingsGoalId: goal._id.toString(),
+            milestone: String(milestone),
+          },
+        });
+        return;
+      }
+    } catch (error) {
+      this.logger.error(
+        `Savings-goal milestone check failed for goal ${goal._id.toString()}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   toSanitized(goal: SavingsGoalDocument): SavingsGoalResponseDto {

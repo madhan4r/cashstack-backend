@@ -10,6 +10,7 @@ export interface SanitizedAccount {
   icon: string | null;
   description: string | null;
   isArchived: boolean;
+  lowBalanceThreshold: number | null;
   ownerId: string;
   ownerName: string;
   createdAt: Date;

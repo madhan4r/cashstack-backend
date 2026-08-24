@@ -43,6 +43,14 @@ export class SavingsGoal {
 
   @Prop({ type: String, default: null })
   color!: string | null;
+
+  /** Highest progress milestone (see `SavingsGoalAlertService.MILESTONES`)
+   * already pushed for this goal — prevents re-alerting on every
+   * contribution once a milestone has been crossed. Not reset on
+   * withdrawal: dropping back under 90% and re-crossing it later shouldn't
+   * re-fire the same alert. */
+  @Prop({ default: 0 })
+  lastAlertedMilestone!: number;
 }
 
 export const SavingsGoalSchema = SchemaFactory.createForClass(SavingsGoal);
