@@ -4,6 +4,7 @@ import { App, cert, initializeApp, ServiceAccount } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import { AppConfigService } from '../config/app-config.service';
 import { UsersService } from '../users/users.service';
+import { categoryForType, isCategoryEnabled } from './notification-category';
 import { NotificationRecordService } from './notification-record.service';
 
 export interface PushPayload {
@@ -53,16 +54,26 @@ export class PushNotificationService implements OnModuleInit {
   }
 
   async sendToUser(userId: string, payload: PushPayload): Promise<void> {
+    const user = await this.usersService.findById(userId);
+
+    const category = categoryForType(payload.data?.type);
+    if (
+      category &&
+      !isCategoryEnabled(user.notificationPreferences, category)
+    ) {
+      // Muted category — no push, and deliberately no in-app record either:
+      // the whole point of muting is not seeing it, not just not being
+      // pushed about it.
+      return;
+    }
+
     // Always recorded for the in-app notification center, even when the
     // FCM send below no-ops (Firebase not configured, no device token) —
     // from the caller's perspective a notification-worthy event happened
     // regardless of whether a push actually reached a device.
     await this.notificationRecordService.record(userId, payload);
 
-    if (!this.app) return;
-
-    const user = await this.usersService.findById(userId);
-    if (user.pushTokens.length === 0) return;
+    if (!this.app || user.pushTokens.length === 0) return;
 
     const response = await getMessaging(this.app).sendEachForMulticast({
       tokens: user.pushTokens,

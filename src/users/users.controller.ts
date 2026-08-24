@@ -22,7 +22,11 @@ import { CurrentUser } from '../common/decorators';
 import { USER_MESSAGES } from '../common/constants';
 import { AppException } from '../common/exceptions';
 import type { JwtPayload } from '../common/interfaces';
-import { RegisterPushTokenDto } from '../notifications/dto';
+import {
+  RegisterPushTokenDto,
+  UpdateNotificationPreferencesDto,
+  validatePreferencesShape,
+} from '../notifications/dto';
 import { UpdateProfileDto, UserResponseDto } from './dto';
 import { AvatarService } from './services/avatar.service';
 import { UsersService } from './users.service';
@@ -169,5 +173,36 @@ export class UsersController {
   ) {
     await this.usersService.removePushToken(userId, dto.token);
     return { message: USER_MESSAGES.PUSH_TOKEN_UNREGISTERED };
+  }
+
+  @Get('me/notification-preferences')
+  @ApiOperation({
+    summary: "Get the current user's per-category notification preferences",
+    description:
+      'A category absent from the returned map is enabled by default.',
+  })
+  async getNotificationPreferences(@CurrentUser('sub') userId: string) {
+    const data = await this.usersService.getNotificationPreferences(userId);
+    return { message: USER_MESSAGES.PROFILE_FETCHED, data };
+  }
+
+  @Patch('me/notification-preferences')
+  @ApiOperation({
+    summary: "Update the current user's notification preferences",
+    description:
+      'Merges into the existing preferences — only the categories present in the body are changed.',
+  })
+  async updateNotificationPreferences(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ) {
+    if (!validatePreferencesShape(dto.preferences)) {
+      throw new AppException('preferences must be a map of booleans');
+    }
+    const data = await this.usersService.setNotificationPreferences(
+      userId,
+      dto.preferences,
+    );
+    return { message: USER_MESSAGES.PROFILE_UPDATED, data };
   }
 }

@@ -133,6 +133,37 @@ export class UsersService {
       .exec();
   }
 
+  async getNotificationPreferences(
+    id: string,
+  ): Promise<Record<string, boolean>> {
+    const user = await this.findById(id);
+    return user.notificationPreferences;
+  }
+
+  async setNotificationPreferences(
+    id: string,
+    updates: Record<string, boolean>,
+  ): Promise<Record<string, boolean>> {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        // Merge, not replace — PATCHing one category shouldn't clobber the
+        // others' stored preferences.
+        Object.fromEntries(
+          Object.entries(updates).map(([category, enabled]) => [
+            `notificationPreferences.${category}`,
+            enabled,
+          ]),
+        ),
+        { new: true },
+      )
+      .exec();
+    if (!user) {
+      throw new ResourceNotFoundException(AUTH_MESSAGES.USER_NOT_FOUND);
+    }
+    return user.notificationPreferences;
+  }
+
   toSanitized(user: UserDocument): SanitizedUser {
     return {
       id: user._id.toString(),

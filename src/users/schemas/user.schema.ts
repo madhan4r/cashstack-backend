@@ -77,6 +77,14 @@ export class User {
    * invalid/unregistered-token error, not eagerly. */
   @Prop({ type: [String], default: [] })
   pushTokens!: string[];
+
+  /** Per-category opt-out for push/in-app notifications — keyed by
+   * `NotificationCategory` (see `notifications/constants`), e.g.
+   * `{ budget: false }` to mute budget alerts. A category absent from this
+   * map is enabled by default, so adding a brand-new category later
+   * doesn't silently mute it for existing users. */
+  @Prop({ type: SchemaTypes.Mixed, default: {} })
+  notificationPreferences!: Record<string, boolean>;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
