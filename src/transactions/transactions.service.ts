@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, Types } from 'mongoose';
 import { AccountsService } from '../accounts/accounts.service';
+import { BudgetAlertService } from '../budget/budget-alert.service';
 import { CategoriesService } from '../categories/categories.service';
 import { AppException, ResourceNotFoundException } from '../common/exceptions';
 import { TRANSACTION_MESSAGES } from '../common/constants';
@@ -28,6 +29,7 @@ export class TransactionsService {
     private readonly accountsService: AccountsService,
     private readonly categoriesService: CategoriesService,
     private readonly householdService: HouseholdService,
+    private readonly budgetAlertService: BudgetAlertService,
   ) {}
 
   async create(
@@ -40,7 +42,7 @@ export class TransactionsService {
       dto,
     );
 
-    return this.transactionModel.create({
+    const transaction = await this.transactionModel.create({
       userId,
       amount: dto.amount,
       type: dto.type,
@@ -50,6 +52,22 @@ export class TransactionsService {
       tags: dto.tags ?? [],
       ...resolvedFields,
     });
+
+    // Fire-and-forget — budget alerts are informational and must never
+    // slow down or fail transaction creation. Only expenses count against
+    // a budget, and each check independently swallows its own errors (see
+    // BudgetAlertService).
+    if (dto.type === TransactionType.EXPENSE) {
+      void this.budgetAlertService.checkOverall(userId);
+      if (resolvedFields.categoryId) {
+        void this.budgetAlertService.checkCategory(
+          userId,
+          resolvedFields.categoryId.toString(),
+        );
+      }
+    }
+
+    return transaction;
   }
 
   async findAll(

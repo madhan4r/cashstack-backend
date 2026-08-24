@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { HOUSEHOLD_MESSAGES } from '../common/constants';
@@ -8,6 +8,7 @@ import {
   ForbiddenActionException,
   ResourceNotFoundException,
 } from '../common/exceptions';
+import { PushNotificationService } from '../notifications/push-notification.service';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { HouseholdInviteResponseDto } from './dto/household-invite-response.dto';
 import { HouseholdResponseDto } from './dto/household-response.dto';
@@ -25,8 +26,13 @@ import {
  * shows up practically immediately everywhere. */
 const ACCESSIBLE_IDS_CACHE_TTL_MS = 5000;
 
+/** How long a household invite stays actionable before it's treated as
+ * expired — see [HouseholdInvite.expiresAt]. */
+const INVITE_EXPIRY_DAYS = 7;
+
 @Injectable()
 export class HouseholdService {
+  private readonly logger = new Logger(HouseholdService.name);
   private readonly accessibleIdsCache = new Map<
     string,
     { ids: string[]; expiresAt: number }
@@ -38,6 +44,7 @@ export class HouseholdService {
     @InjectModel(HouseholdInvite.name)
     private readonly inviteModel: Model<HouseholdInvite>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    private readonly pushNotificationService: PushNotificationService,
   ) {}
 
   /**
@@ -207,6 +214,7 @@ export class HouseholdService {
         householdId,
         invitedEmail: normalizedEmail,
         status: HouseholdInviteStatus.PENDING,
+        expiresAt: { $gt: new Date() },
       })
       .exec();
     const invite =
@@ -216,7 +224,30 @@ export class HouseholdService {
         invitedEmail: normalizedEmail,
         invitedBy: inviter._id,
         status: HouseholdInviteStatus.PENDING,
+        expiresAt: new Date(
+          Date.now() + INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+        ),
       }));
+
+    if (invitee) {
+      // Best-effort — the invite itself is already saved above, and the
+      // invitee also sees this as an in-app banner on next launch regardless
+      // (see PendingHouseholdInviteBanner), so a failed send (FCM network
+      // error, no device registered, Firebase not configured, ...) shouldn't
+      // fail the whole request or roll back the invite.
+      try {
+        await this.pushNotificationService.sendToUser(invitee._id.toString(), {
+          title: 'Household invite',
+          body: `${inviter.fullName} invited you to join their household`,
+          data: { type: 'household_invite', inviteId: invite._id.toString() },
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to send household-invite push to ${invitee._id.toString()}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      }
+    }
 
     return this.toInviteResponse(
       invite,
@@ -232,6 +263,7 @@ export class HouseholdService {
       .find({
         invitedEmail: email.toLowerCase(),
         status: HouseholdInviteStatus.PENDING,
+        expiresAt: { $gt: new Date() },
       })
       .sort({ createdAt: -1 })
       .exec();
@@ -276,6 +308,11 @@ export class HouseholdService {
       .exec();
     if (!invite) {
       throw new ResourceNotFoundException(HOUSEHOLD_MESSAGES.INVITE_NOT_FOUND);
+    }
+    if (invite.expiresAt <= new Date()) {
+      invite.status = HouseholdInviteStatus.EXPIRED;
+      await invite.save();
+      throw new AppException(HOUSEHOLD_MESSAGES.INVITE_EXPIRED);
     }
 
     if (!accept) {
@@ -352,6 +389,7 @@ export class HouseholdService {
       .findOne({
         invitedEmail: newUser.email,
         status: HouseholdInviteStatus.PENDING,
+        expiresAt: { $gt: new Date() },
       })
       .sort({ createdAt: 1 })
       .exec();

@@ -126,6 +126,7 @@ export const HOUSEHOLD_MESSAGES = {
   INVITE_DECLINED: 'Invite declined',
   INVITE_CANCELLED: 'Invite cancelled',
   INVITE_NOT_FOUND: 'Invite not found',
+  INVITE_EXPIRED: 'This invite has expired — ask them to send a new one',
   LEFT: "You've left the household",
   FETCHED: 'Household fetched successfully',
   INVITES_FETCHED: 'Pending invites fetched successfully',

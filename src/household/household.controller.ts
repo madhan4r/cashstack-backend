@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators';
 import { HOUSEHOLD_MESSAGES } from '../common/constants';
 import {
@@ -46,6 +47,10 @@ export class HouseholdController {
 
   @Post('invites')
   @HttpCode(HttpStatus.CREATED)
+  // Stricter than the app-wide default (100/min) — each invite now also
+  // fires a push at the invitee, so an unthrottled endpoint here doubles
+  // as a way to spam pushes at an arbitrary email/account.
+  @Throttle({ default: { limit: 5, ttl: 600_000 } })
   @ApiOperation({
     summary: 'Invite someone into your household by email',
     description:

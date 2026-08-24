@@ -3,4 +3,5 @@ export enum HouseholdInviteStatus {
   ACCEPTED = 'ACCEPTED',
   DECLINED = 'DECLINED',
   CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
 }

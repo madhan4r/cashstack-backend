@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import { basename, join } from 'path';
 import { AppConfigService } from '../../config/app-config.service';
@@ -18,9 +18,11 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
  */
 @Injectable()
 export class AvatarService {
+  private readonly logger = new Logger(AvatarService.name);
+
   constructor(private readonly appConfigService: AppConfigService) {}
 
-  private get avatarsDir(): string {
+  get avatarsDir(): string {
     return join(this.appConfigService.app.uploadsDir, 'avatars');
   }
 
@@ -42,13 +44,18 @@ export class AvatarService {
   }
 
   /** Best-effort delete — a missing file (already removed, or never
-   * existed) is not an error. */
+   * existed) is not an error, but anything else (permissions, disk I/O) is
+   * logged rather than silently swallowed. */
   async delete(avatarUrl: string | null | undefined): Promise<void> {
     if (!avatarUrl) return;
     try {
       await fs.unlink(join(this.avatarsDir, basename(avatarUrl)));
-    } catch {
-      // Nothing to clean up.
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      this.logger.error(
+        `Failed to delete avatar file for ${avatarUrl}`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
   }
 }

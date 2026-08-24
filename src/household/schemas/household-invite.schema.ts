@@ -39,6 +39,14 @@ export class HouseholdInvite {
 
   @Prop({ type: Date, default: null })
   respondedAt!: Date | null;
+
+  /** Set explicitly at creation time (createdAt + INVITE_EXPIRY_DAYS) —
+   * a stale invite (email typo, invitee never signs up) would otherwise
+   * hang around as PENDING forever, silently reserving the invitedEmail
+   * against future re-invites and cluttering the invitee's pending list
+   * if they ever do create an account with that address. */
+  @Prop({ type: Date, required: true })
+  expiresAt!: Date;
 }
 
 export const HouseholdInviteSchema =
