@@ -17,11 +17,27 @@ import {
   DashboardTransactionDto,
   ExpenseByCategoryDto,
   MonthlyTrendDto,
+  SpendingInsightDto,
 } from './dto/dashboard-response.dto';
-import { MonthlyTrendAggregate, TransactionFacetResult } from './interfaces';
+import {
+  CategoryHistoricalStatAggregate,
+  MonthlyTrendAggregate,
+  TransactionFacetResult,
+} from './interfaces';
 
 const RECENT_TRANSACTIONS_LIMIT = 10;
 const MONTHLY_TREND_MONTHS = 6;
+/** How many months of prior spend a category's "usual" average is drawn
+ * from — see `buildSpendingInsights`. */
+const INSIGHT_HISTORY_MONTHS = 3;
+/** A category only surfaces as an insight once it's this much above its
+ * trailing average — below this is normal month-to-month noise. */
+const INSIGHT_THRESHOLD_PERCENT = 30;
+/** Ignores a spike in a category too small to matter (e.g. a ₹50 category
+ * doubling to ₹100 isn't a meaningful insight) — in the target currency's
+ * units, so this is deliberately a round number rather than unit-aware. */
+const INSIGHT_MIN_AVERAGE = 200;
+const MAX_INSIGHTS = 3;
 
 @Injectable()
 export class DashboardService {
@@ -96,6 +112,11 @@ export class DashboardService {
         monthlyExpense,
         targetCurrency,
       ),
+      spendingInsights: this.buildSpendingInsights(
+        transactionFacets.expenseByCategory,
+        transactionFacets.categoryHistoricalStats,
+        targetCurrency,
+      ),
       accountSummary: this.mapAccountSummary(accountBalances),
       monthlyTrend: this.buildMonthlyTrend(
         transactionFacets.monthlyTrend,
@@ -132,6 +153,17 @@ export class DashboardService {
     const trendMonths = getLastNMonths(MONTHLY_TREND_MONTHS, now);
     const trendStart = new Date(
       Date.UTC(trendMonths[0].year, trendMonths[0].month - 1, 1),
+    );
+    // The INSIGHT_HISTORY_MONTHS calendar months immediately before the
+    // current (partial) one — deliberately excludes the current month
+    // itself, since comparing a still-in-progress month's category totals
+    // to its own average would be comparing partial data to itself.
+    const insightHistoryStart = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth() - INSIGHT_HISTORY_MONTHS,
+        1,
+      ),
     );
 
     const pipeline: PipelineStage[] = [
@@ -226,6 +258,25 @@ export class DashboardService {
             },
             { $sort: { total: -1 } },
           ],
+          // Same shape as expenseByCategory but over the trailing months
+          // before the current one — used only to compute each category's
+          // "usual" average for spending insights, not displayed directly.
+          categoryHistoricalStats: [
+            {
+              $match: {
+                transactionDate: { $gte: insightHistoryStart, $lt: monthStart },
+                type: TransactionType.EXPENSE,
+                categoryId: { $ne: null },
+              },
+            },
+            ...this.currencyLookupStages(),
+            {
+              $group: {
+                _id: { categoryId: '$categoryId', currency: '$currency' },
+                total: { $sum: '$amount' },
+              },
+            },
+          ],
           monthlyTrend: [
             {
               $match: {
@@ -264,6 +315,7 @@ export class DashboardService {
         recentTransactions: [],
         monthlyStats: [],
         expenseByCategory: [],
+        categoryHistoricalStats: [],
         monthlyTrend: [],
       }
     );
@@ -305,18 +357,35 @@ export class DashboardService {
     }));
   }
 
-  private mapExpenseByCategory(
-    raw: TransactionFacetResult['expenseByCategory'],
-    monthlyExpense: number,
+  /** One category can have several currency buckets (a household member
+   * spent on it in a different-currency account) — combines them into one
+   * converted total per category. Shared by `mapExpenseByCategory` (this
+   * month's totals) and `buildSpendingInsights` (the trailing average),
+   * so both agree on exactly how a category's total is computed. */
+  private combineByCategory(
+    raw: {
+      _id: { categoryId: Types.ObjectId; currency: string };
+      total: number;
+      transactionCount?: number;
+      categoryName?: string;
+      categoryIcon?: string | null;
+      categoryColor?: string | null;
+    }[],
     targetCurrency: string,
-  ): ExpenseByCategoryDto[] {
-    // One category can have several currency buckets (a household member
-    // spent on it in a different-currency account) — combine them into one
-    // converted total per category before mapping to the response shape.
+  ): Map<
+    string,
+    {
+      categoryName: string | null;
+      categoryIcon: string | null;
+      categoryColor: string | null;
+      total: number;
+      transactionCount: number;
+    }
+  > {
     const byCategory = new Map<
       string,
       {
-        categoryName: string;
+        categoryName: string | null;
         categoryIcon: string | null;
         categoryColor: string | null;
         total: number;
@@ -334,28 +403,81 @@ export class DashboardService {
       const existing = byCategory.get(categoryId);
       if (existing) {
         existing.total += converted;
-        existing.transactionCount += item.transactionCount;
+        existing.transactionCount += item.transactionCount ?? 0;
       } else {
         byCategory.set(categoryId, {
-          categoryName: item.categoryName,
+          categoryName: item.categoryName ?? null,
           categoryIcon: item.categoryIcon ?? null,
           categoryColor: item.categoryColor ?? null,
           total: converted,
-          transactionCount: item.transactionCount,
+          transactionCount: item.transactionCount ?? 0,
         });
       }
     }
 
+    return byCategory;
+  }
+
+  private mapExpenseByCategory(
+    raw: TransactionFacetResult['expenseByCategory'],
+    monthlyExpense: number,
+    targetCurrency: string,
+  ): ExpenseByCategoryDto[] {
+    const byCategory = this.combineByCategory(raw, targetCurrency);
+
     return [...byCategory.entries()]
       .map(([categoryId, entry]) => ({
         categoryId,
-        ...entry,
+        categoryName: entry.categoryName ?? 'Unknown category',
+        categoryIcon: entry.categoryIcon,
+        categoryColor: entry.categoryColor,
+        total: entry.total,
+        transactionCount: entry.transactionCount,
         percentage:
           monthlyExpense > 0
             ? Math.round((entry.total / monthlyExpense) * 1000) / 10
             : 0,
       }))
       .sort((a, b) => b.total - a.total);
+  }
+
+  /** Flags categories spending significantly (see INSIGHT_THRESHOLD_PERCENT)
+   * above their trailing INSIGHT_HISTORY_MONTHS average — the highest
+   * percentage-over-average categories first, capped at MAX_INSIGHTS so the
+   * dashboard isn't flooded on a first month of heavy use. */
+  private buildSpendingInsights(
+    currentMonthRaw: TransactionFacetResult['expenseByCategory'],
+    historicalRaw: CategoryHistoricalStatAggregate[],
+    targetCurrency: string,
+  ): SpendingInsightDto[] {
+    const current = this.combineByCategory(currentMonthRaw, targetCurrency);
+    const historicalTotals = this.combineByCategory(
+      historicalRaw,
+      targetCurrency,
+    );
+
+    const insights: SpendingInsightDto[] = [];
+    for (const [categoryId, entry] of current) {
+      const average =
+        (historicalTotals.get(categoryId)?.total ?? 0) / INSIGHT_HISTORY_MONTHS;
+      if (average < INSIGHT_MIN_AVERAGE) continue;
+
+      const percentageAboveAverage = Math.round(
+        ((entry.total - average) / average) * 100,
+      );
+      if (percentageAboveAverage < INSIGHT_THRESHOLD_PERCENT) continue;
+
+      insights.push({
+        categoryId,
+        categoryName: entry.categoryName ?? 'Unknown category',
+        message: `You've spent ${percentageAboveAverage}% more on ${entry.categoryName} than your usual month`,
+        percentageAboveAverage,
+      });
+    }
+
+    return insights
+      .sort((a, b) => b.percentageAboveAverage - a.percentageAboveAverage)
+      .slice(0, MAX_INSIGHTS);
   }
 
   private mapAccountSummary(

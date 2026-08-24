@@ -37,9 +37,17 @@ export interface MonthlyTrendAggregate {
   total: number;
 }
 
+/** Same shape as `ExpenseByCategoryAggregate` minus the category metadata —
+ * used only to compute a trailing average, never displayed on its own. */
+export interface CategoryHistoricalStatAggregate {
+  _id: { categoryId: Types.ObjectId; currency: string };
+  total: number;
+}
+
 export interface TransactionFacetResult {
   recentTransactions: RecentTransactionAggregate[];
   monthlyStats: MonthlyStatAggregate[];
   expenseByCategory: ExpenseByCategoryAggregate[];
+  categoryHistoricalStats: CategoryHistoricalStatAggregate[];
   monthlyTrend: MonthlyTrendAggregate[];
 }

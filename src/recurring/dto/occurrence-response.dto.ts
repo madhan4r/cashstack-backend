@@ -15,6 +15,9 @@ export class OccurrenceResponseDto {
   amount!: number;
 
   @ApiProperty()
+  accountId!: string;
+
+  @ApiProperty()
   dueDate!: Date;
 
   @ApiProperty({ enum: OccurrenceStatus })

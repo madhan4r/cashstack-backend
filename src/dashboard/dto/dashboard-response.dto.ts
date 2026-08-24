@@ -64,6 +64,26 @@ export class ExpenseByCategoryDto {
   percentage!: number;
 }
 
+export class SpendingInsightDto {
+  @ApiProperty({ example: '64f1c2e5b3f1a2c3d4e5f6a8' })
+  categoryId!: string;
+
+  @ApiProperty({ example: 'Dining Out' })
+  categoryName!: string;
+
+  @ApiProperty({
+    example: "You've spent 45% more on Dining Out than your usual month",
+  })
+  message!: string;
+
+  @ApiProperty({
+    example: 45,
+    description:
+      'How much higher this month is than the trailing average, as a percentage',
+  })
+  percentageAboveAverage!: number;
+}
+
 export class AccountSummaryDto {
   @ApiProperty({ example: '64f1c2e5b3f1a2c3d4e5f6a7' })
   id!: string;
@@ -153,6 +173,9 @@ export class DashboardDataDto {
 
   @ApiProperty({ type: [ExpenseByCategoryDto] })
   expenseByCategory!: ExpenseByCategoryDto[];
+
+  @ApiProperty({ type: [SpendingInsightDto] })
+  spendingInsights!: SpendingInsightDto[];
 
   @ApiProperty({ type: [AccountSummaryDto] })
   accountSummary!: AccountSummaryDto[];

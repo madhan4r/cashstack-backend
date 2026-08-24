@@ -328,6 +328,7 @@ export class RecurringService {
       recurringTransactionId: row.recurringTransactionId.toString(),
       name: row.recurring.name,
       amount: row.recurring.amount,
+      accountId: row.recurring.accountId.toString(),
       dueDate: row.dueDate,
       status: row.status,
       transactionId: row.transactionId ? row.transactionId.toString() : null,
