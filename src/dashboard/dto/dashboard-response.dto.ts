@@ -12,6 +12,17 @@ export class DashboardTransactionDto {
   @ApiProperty({ enum: TransactionType, example: TransactionType.EXPENSE })
   type!: TransactionType;
 
+  @ApiProperty({ example: '64f1c2e5b3f1a2c3d4e5f6a9' })
+  ownerId!: string;
+
+  @ApiPropertyOptional({
+    example: 'Priya Sharma',
+    nullable: true,
+    description:
+      "The transaction owner's name, only populated when it isn't the caller's own — see HouseholdService.getAccessibleUserNames",
+  })
+  ownerName!: string | null;
+
   @ApiPropertyOptional({ example: 'HDFC Savings', nullable: true })
   accountName!: string | null;
 

@@ -3,6 +3,7 @@ import { PaymentMethod, TransactionType } from '../../transactions/enums';
 
 export interface RecentTransactionAggregate {
   _id: Types.ObjectId;
+  userId: Types.ObjectId;
   amount: number;
   type: TransactionType;
   accountName: string | null;

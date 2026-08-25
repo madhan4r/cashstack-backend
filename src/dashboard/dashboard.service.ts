@@ -60,13 +60,14 @@ export class DashboardService {
     const user = await this.usersService.findById(userId);
     const targetCurrency = user.preferredCurrency;
 
-    const [transactionFacets, accountBalances, monthlyBudget] =
+    const [transactionFacets, accountBalances, monthlyBudget, ownerNames] =
       await Promise.all([
         this.getTransactionFacets(scopeUserIds),
         this.accountBalanceService.getAccountBalances(userId, {
           scopeUserIds,
         }),
         this.budgetService.getAggregateAmount(userId, scopeUserIds),
+        this.householdService.getAccessibleUserNames(userId),
       ]);
 
     // Every account balance/transaction keeps its own account's currency —
@@ -106,6 +107,7 @@ export class DashboardService {
         monthlyBudget != null ? monthlyBudget - monthlyExpense : 0,
       recentTransactions: this.mapRecentTransactions(
         transactionFacets.recentTransactions,
+        ownerNames,
       ),
       expenseByCategory: this.mapExpenseByCategory(
         transactionFacets.expenseByCategory,
@@ -191,6 +193,7 @@ export class DashboardService {
             },
             {
               $project: {
+                userId: 1,
                 amount: 1,
                 type: 1,
                 notes: 1,
@@ -342,11 +345,14 @@ export class DashboardService {
 
   private mapRecentTransactions(
     raw: TransactionFacetResult['recentTransactions'],
+    ownerNames: Map<string, string>,
   ): DashboardTransactionDto[] {
     return raw.map((transaction) => ({
       id: transaction._id.toString(),
       amount: transaction.amount,
       type: transaction.type,
+      ownerId: transaction.userId.toString(),
+      ownerName: ownerNames.get(transaction.userId.toString()) ?? null,
       accountName: transaction.accountName ?? null,
       categoryName: transaction.categoryName ?? null,
       categoryIcon: transaction.categoryIcon ?? null,
