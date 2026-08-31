@@ -55,9 +55,11 @@ export class DashboardService {
     // Resolved once and handed to every branch below — each of them would
     // otherwise independently re-resolve it via HouseholdService, tripling
     // the number of Mongo round-trips this endpoint makes for no reason.
-    const scopeUserIds =
-      await this.householdService.getAccessibleUserIds(userId);
-    const user = await this.usersService.findById(userId);
+    // Independent of each other, so run in parallel rather than serially.
+    const [scopeUserIds, user] = await Promise.all([
+      this.householdService.getAccessibleUserIds(userId),
+      this.usersService.findById(userId),
+    ]);
     const targetCurrency = user.preferredCurrency;
 
     const [transactionFacets, accountBalances, monthlyBudget, ownerNames] =

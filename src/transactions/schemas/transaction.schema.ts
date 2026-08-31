@@ -77,4 +77,7 @@ export class Transaction {
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);
 
 TransactionSchema.index({ userId: 1, transactionDate: -1 });
+// Serves the dashboard's monthly-stats / expense-by-category / monthly-trend
+// facets, which all filter by userId + type + a transactionDate range.
+TransactionSchema.index({ userId: 1, type: 1, transactionDate: -1 });
 TransactionSchema.index({ notes: 'text', tags: 'text' });
